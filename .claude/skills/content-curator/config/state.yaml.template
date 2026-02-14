@@ -1,0 +1,20 @@
+# Content Curator State Tracker
+# This file is auto-managed by the content-curator skill
+# DO NOT edit manually unless you know what you're doing
+
+# Last update timestamp
+last_updated: null
+
+# Processed items
+processed:
+  youtube: {}
+  bilibili: {}
+  xiaoyuzhou: {}
+
+# Statistics
+stats:
+  total_processed: 0
+  youtube_count: 0
+  bilibili_count: 0
+  xiaoyuzhou_count: 0
+  last_batch_run: null

@@ -1,0 +1,98 @@
+# API Keys and Credentials
+api_keys:
+  # BibiGPT API key (required for Bilibili and Xiaoyuzhou)
+  # Get your key at: https://bibigpt.co
+  bibigpt: "your_bibigpt_api_key_here"
+
+  # Feishu (Lark) credentials (optional, for Bitable sync)
+  # Get from: https://open.feishu.cn/app
+  feishu:
+    app_id: "cli_xxx"
+    app_secret: "xxx"
+    # From Bitable URL: https://xxx.feishu.cn/base/bascnxxx?table=tblxxx
+    bitable_app_token: "bascnxxx"
+    table_id: "tblxxx"
+
+# Global Settings
+settings:
+  # Output directory for archived content
+  output_dir: "./output"
+
+  # Auto sync to Feishu after processing
+  auto_sync_feishu: true
+
+  # Download cover images
+  download_covers: true
+
+  # Minimum duration filter (minutes)
+  default_min_duration: 30
+
+  # Maximum items to fetch per source in batch mode
+  default_batch_limit: 10
+
+# Content Sources
+sources:
+  # YouTube Channels
+  youtube:
+    - name: "Lex Fridman Podcast"
+      url: "https://www.youtube.com/@lexfridman"
+      min_duration: 30
+      enabled: true
+      tags: ["AI", "Science", "Philosophy"]
+
+    - name: "The Diary Of A CEO"
+      url: "https://www.youtube.com/@TheDiaryOfACEO"
+      min_duration: 45
+      enabled: true
+      tags: ["Business", "Entrepreneurship", "Health"]
+
+    # Add more YouTube channels here
+    # - name: "Your Channel Name"
+    #   url: "https://www.youtube.com/@channel"
+    #   min_duration: 20
+    #   enabled: true
+    #   tags: ["Tag1", "Tag2"]
+
+  # Bilibili UP主
+  bilibili:
+    - name: "回形针PaperClip"
+      uid: "258150656"
+      min_duration: 10
+      enabled: true
+      tags: ["Science", "Documentary"]
+
+    - name: "李永乐老师"
+      uid: "9458053"
+      min_duration: 5
+      enabled: true
+      tags: ["Education", "Math", "Physics"]
+
+    # Add more Bilibili UP主 here
+    # Get UID from: https://space.bilibili.com/UID
+    # - name: "UP主名称"
+    #   uid: "12345678"
+    #   min_duration: 10
+    #   enabled: true
+    #   tags: ["标签1", "标签2"]
+
+  # 小宇宙播客
+  xiaoyuzhou:
+    - name: "忽左忽右"
+      podcast_id: "6021f949a789fca4eff51969"
+      min_duration: 30
+      enabled: true
+      tags: ["Society", "Culture"]
+
+    - name: "时代自拍"
+      podcast_id: "5e4ee2c5418a84a046d37d21"
+      min_duration: 20
+      enabled: true
+      tags: ["History", "Current Events"]
+
+    # Add more Xiaoyuzhou podcasts here
+    # Get podcast_id from URL: https://xiaoyuzhou.co/podcast/{podcast_id}
+    # - name: "播客名称"
+    #   podcast_id: "podcast_id_here"
+    #   min_duration: 15
+    #   enabled: true
+    #   tags: ["标签1", "标签2"]

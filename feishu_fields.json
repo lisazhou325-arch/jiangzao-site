@@ -1,0 +1,243 @@
+{
+  "code": 0,
+  "data": {
+    "has_more": false,
+    "items": [
+      {
+        "field_id": "fld7AsGrYp",
+        "field_name": "标题",
+        "is_extend": false,
+        "is_primary": true,
+        "is_synced": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fldQVKpmaI",
+        "field_name": "嘉宾",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fld73Aq6OR",
+        "field_name": "原内容链接",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 15,
+        "ui_type": "Url"
+      },
+      {
+        "field_id": "fldGM0wv0H",
+        "field_name": "发布时间",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": {
+          "auto_fill": false,
+          "date_formatter": "yyyy/MM/dd"
+        },
+        "type": 5,
+        "ui_type": "DateTime"
+      },
+      {
+        "field_id": "fld9sIUgxu",
+        "field_name": "平台来源",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": {
+          "options": [
+            {
+              "color": 0,
+              "id": "opt6RqpWSy",
+              "name": "Youtube"
+            },
+            {
+              "color": 1,
+              "id": "optvh8qM7K",
+              "name": "B站"
+            },
+            {
+              "color": 2,
+              "id": "opt7gTXo0W",
+              "name": "小宇宙"
+            },
+            {
+              "color": 3,
+              "id": "opt495002801",
+              "name": "BILIBILI"
+            },
+            {
+              "color": 4,
+              "id": "opt1350905658",
+              "name": "YOUTUBE"
+            }
+          ]
+        },
+        "type": 3,
+        "ui_type": "SingleSelect"
+      },
+      {
+        "field_id": "fldgOzajzb",
+        "field_name": "封面图",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 17,
+        "ui_type": "Attachment"
+      },
+      {
+        "field_id": "fld9qgymy5",
+        "field_name": "标签",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": {
+          "options": [
+            {
+              "color": 0,
+              "id": "optMtasFH2",
+              "name": "AI Coding"
+            },
+            {
+              "color": 1,
+              "id": "opt1cDckhV",
+              "name": "AI Products"
+            },
+            {
+              "color": 2,
+              "id": "optXyjXdXE",
+              "name": "AI Organization"
+            },
+            {
+              "color": 3,
+              "id": "opt3OumMHy",
+              "name": "AI Business"
+            },
+            {
+              "color": 4,
+              "id": "opt394457584",
+              "name": "\"无匹配标签\""
+            },
+            {
+              "color": 4,
+              "id": "opt1118647198",
+              "name": "无匹配标签"
+            },
+            {
+              "color": 5,
+              "id": "opt143592470",
+              "name": "VC"
+            },
+            {
+              "color": 6,
+              "id": "opt2073960924",
+              "name": "Investing"
+            },
+            {
+              "color": 7,
+              "id": "opt206569567",
+              "name": "Startups"
+            }
+          ]
+        },
+        "type": 4,
+        "ui_type": "MultiSelect"
+      },
+      {
+        "field_id": "fldUUINx9p",
+        "field_name": "摘要正文",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fldAWMCOvc",
+        "field_name": "金句1",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fldxCzoTJl",
+        "field_name": "金句2",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fld2RBjRzC",
+        "field_name": "金句3",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fldn0Orrgr",
+        "field_name": "金句4",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fldFShbDYR",
+        "field_name": "金句5",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": null,
+        "type": 1,
+        "ui_type": "Text"
+      },
+      {
+        "field_id": "fldbno9hqo",
+        "field_name": "状态",
+        "is_extend": false,
+        "is_primary": false,
+        "is_synced": false,
+        "property": {
+          "options": [
+            {
+              "color": 0,
+              "id": "optfVRbdc5",
+              "name": "已发布"
+            },
+            {
+              "color": 1,
+              "id": "optTKs5MeI",
+              "name": "未发布"
+            }
+          ]
+        },
+        "type": 3,
+        "ui_type": "SingleSelect"
+      }
+    ],
+    "page_token": "fldbno9hqo",
+    "total": 14
+  },
+  "msg": "success"
+}

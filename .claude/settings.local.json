@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yt-dlp:*)",
+      "Bash(python:*)",
+      "Bash(cmd.exe /c \"rename \"\"D:\\\\project\\\\1228\\\\.claude\\\\skills\\\\daily-content-curator\"\" \"\"content-curator\"\"\")",
+      "Bash(powershell -Command:*)",
+      "Bash(deno --version:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "WebFetch(domain:aihuangshu.com)"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+# Ignore sensitive configuration files
+config/sources.yaml
+
+# Ignore state tracker (contains local paths)
+config/state.yaml
+
+# Ignore output directory
+output/
+
+# Python cache
+scripts/__pycache__/
+scripts/*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
