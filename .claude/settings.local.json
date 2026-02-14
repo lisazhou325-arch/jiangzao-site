@@ -9,7 +9,9 @@
       "Bash(ffmpeg:*)",
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "WebFetch(domain:aihuangshu.com)"
+      "WebFetch(domain:aihuangshu.com)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next build)"
     ]
   }
 }
