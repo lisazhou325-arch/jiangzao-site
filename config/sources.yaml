@@ -1,0 +1,91 @@
+# API Keys and Credentials
+api_keys:
+  bibigpt: "FB3EZ8gdirZd"
+  feishu:
+    app_id: "cli_a9d2236184b89cc4"
+    app_secret: "1bTYIgI2xMOgKkAYpfesWdMWXUtwaIyp"
+    bitable_app_token: "Pq2ybNSI4abykJsoSXBcJpa3nwg"
+    table_id: "tbljGz8pfAeoqeuo"
+
+settings:
+  output_dir: "./content-archive"
+  auto_sync_feishu: true
+  download_covers: true
+  default_min_duration: 30
+  default_batch_limit: 10
+
+sources:
+  youtube:
+    - name: "A16z"
+      channel_id: "UCQ1VQj-37k12yS_VUhfQHsw"
+      url: "https://www.youtube.com/channel/UCQ1VQj-37k12yS_VUhfQHsw"
+      min_duration: 30
+      enabled: true
+      tags: ["VC", "Tech", "Startups"]
+
+    - name: "Lenny s Podcast"
+      channel_id: "UC6t1076G0jYXOAoYCm153dA"
+      url: "https://www.youtube.com/channel/UC6t1076G0jYXOAoYCm153dA"
+      min_duration: 30
+      enabled: true
+      tags: ["Product", "Growth", "Startups"]
+
+    - name: "Sequoia Capital"
+      channel_id: "UCWrF0oN6unbXrWsTN7RctTw"
+      url: "https://www.youtube.com/channel/UCWrF0oN6unbXrWsTN7RctTw"
+      min_duration: 30
+      enabled: true
+      tags: ["VC", "Investing", "Startups"]
+
+    - name: "Peter Yang"
+      channel_id: "UCnpBg7yqNauHtINSp0l5-cg"
+      url: "https://www.youtube.com/channel/UCnpBg7yqNauHtINSp0l5-cg"
+      min_duration: 30
+      enabled: true
+      tags: ["Product", "Career", "Tech"]
+
+    - name: "Dwarkesh Patel"
+      channel_id: "UC1D6gT0N1s0k_x6d9N9y_2Q"
+      url: "https://www.youtube.com/channel/UC1D6gT0N1s0k_x6d9N9y_2Q"
+      min_duration: 30
+      enabled: true
+      tags: ["AI", "Science", "Philosophy"]
+
+    - name: "Lex Fridman"
+      channel_id: "UCHSHZKyawb7ixDdsGog4iWA"
+      url: "https://www.youtube.com/channel/UCHSHZKyawb7ixDdsGog4iWA"
+      min_duration: 30
+      enabled: true
+      tags: ["AI", "Science", "Philosophy"]
+
+    - name: "The Diary Of A CEO"
+      url: "https://www.youtube.com/@TheDiaryOfACEO"
+      min_duration: 45
+      enabled: true
+      tags: ["Business", "Entrepreneurship", "Health"]
+
+  bilibili:
+    - name: "回形针PaperClip"
+      uid: "258150656"
+      min_duration: 10
+      enabled: true
+      tags: ["Science", "Documentary"]
+
+    - name: "李永乐老师"
+      uid: "9458053"
+      min_duration: 5
+      enabled: true
+      tags: ["Education", "Math", "Physics"]
+
+  xiaoyuzhou:
+    - name: "忽左忽右"
+      podcast_id: "6021f949a789fca4eff51969"
+      min_duration: 30
+      enabled: true
+      tags: ["Society", "Culture"]
+
+    - name: "时代自拍"
+      podcast_id: "5e4ee2c5418a84a046d37d21"
+      min_duration: 20
+      enabled: true
+      tags: ["History", "Current Events"]

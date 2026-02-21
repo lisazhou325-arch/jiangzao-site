@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Content Curator - Main Program
 Automated content curation workflow for YouTube, Bilibili, and Xiaoyuzhou
@@ -14,6 +15,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Optional
 
+# Fix Windows console encoding for emoji support
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 # Add scripts to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'scripts'))
 # Import will be done when needed to avoid errors if modules are not yet implemented
@@ -27,6 +34,7 @@ class ContentCurator:
         self.config = self.load_config()
         self.state = self.load_state()
         self.output_dir = Path(self.config.get('settings', {}).get('output_dir', './content-archive'))
+        self.rewrite_prompt = self.load_rewrite_prompt()
 
     def load_config(self) -> dict:
         """Load configuration from sources.yaml"""
@@ -69,6 +77,163 @@ class ContentCurator:
         with open(STATE_FILE, 'w', encoding='utf-8') as f:
             yaml.dump(self.state, f, allow_unicode=True, default_flow_style=False)
 
+    def load_rewrite_prompt(self) -> str:
+        """Load AI rewrite prompt template"""
+        prompt_file = Path("config/rewrite-prompt.md")
+        if prompt_file.exists():
+            with open(prompt_file, 'r', encoding='utf-8') as f:
+                return f.read()
+        return ""
+
+    def process_item(self, item: dict) -> bool:
+        """
+        Process a single content item: download transcript, rewrite with AI, save files
+
+        Args:
+            item: Item dict with id, title, url, platform, etc.
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            from subtitle_downloader import SubtitleDownloader
+            from metadata_extractor import sanitize_filename
+            import requests
+
+            # Create output directory
+            date_str = item['published_at']
+            sanitized_title = sanitize_filename(item['title'], max_length=50)
+            output_dir = self.output_dir / date_str / f"{item['platform']}_{item['source_name'].lower().replace(' ', '-')}_{item['id']}"
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            print(f"   📁 Output: {output_dir}")
+
+            # Step 1: Download subtitle/transcript
+            print(f"   📥 Downloading transcript...")
+            bibigpt_key = self.config.get('api_keys', {}).get('bibigpt')
+            downloader = SubtitleDownloader(bibigpt_api_key=bibigpt_key)
+
+            transcript_result = downloader.download(item['url'], item['platform'], output_dir)
+
+            if not transcript_result:
+                print(f"   ❌ Failed to download transcript")
+                return False
+
+            print(f"   ✅ Transcript downloaded: {transcript_result.get('method', 'unknown')}")
+
+            # Step 2: Download cover image
+            if self.config.get('settings', {}).get('download_covers', True):
+                print(f"   🖼️  Downloading cover image...")
+                try:
+                    # Get thumbnail URL from yt-dlp
+                    cmd = ['yt-dlp', '--print', '%(thumbnail)s', '--no-warnings', item['url']]
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding='utf-8', errors='replace')
+
+                    if result.returncode == 0 and result.stdout.strip():
+                        thumbnail_url = result.stdout.strip()
+                        response = requests.get(thumbnail_url, timeout=30)
+
+                        if response.status_code == 200:
+                            ext = 'jpg' if 'youtube' in item['platform'] else 'webp'
+                            cover_path = output_dir / f"cover.{ext}"
+                            with open(cover_path, 'wb') as f:
+                                f.write(response.content)
+                            print(f"   ✅ Cover image saved")
+                        else:
+                            print(f"   ⚠️  Cover download failed: HTTP {response.status_code}")
+                    else:
+                        print(f"   ⚠️  Could not get thumbnail URL")
+                except Exception as e:
+                    print(f"   ⚠️  Cover download error: {str(e)}")
+
+            # Step 3: Save raw transcript
+            transcript_path = output_dir / "transcript.md"
+            with open(transcript_path, 'w', encoding='utf-8') as f:
+                f.write(f"# {item['title']}\n\n")
+                f.write(f"**Platform:** {item['platform']}\n")
+                f.write(f"**URL:** {item['url']}\n")
+                f.write(f"**Duration:** {item['duration']}\n")
+                f.write(f"**Published:** {item['published_at']}\n\n")
+                f.write("---\n\n")
+                f.write(transcript_result.get('text', ''))
+
+            print(f"   ✅ Transcript saved")
+
+            # Step 4: AI rewrite
+            print(f"   🤖 Rewriting with AI...")
+
+            # Prepare prompt
+            full_prompt = self.rewrite_prompt + "\n\n" + transcript_result.get('text', '')
+
+            # Call AI (using subprocess to call claude CLI)
+            # Note: This assumes claude CLI is available
+            try:
+                # Write prompt to temp file
+                temp_prompt = output_dir / "temp_prompt.txt"
+                with open(temp_prompt, 'w', encoding='utf-8') as f:
+                    f.write(full_prompt)
+
+                # Call AI via stdin
+                ai_cmd = ['claude', '--no-stream']
+                ai_result = subprocess.run(
+                    ai_cmd,
+                    input=full_prompt,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                    encoding='utf-8',
+                    errors='replace'
+                )
+
+                if ai_result.returncode == 0 and ai_result.stdout.strip():
+                    rewritten_content = ai_result.stdout.strip()
+
+                    # Save rewritten content
+                    rewritten_path = output_dir / "rewritten.md"
+                    with open(rewritten_path, 'w', encoding='utf-8') as f:
+                        f.write(rewritten_content)
+
+                    print(f"   ✅ AI rewrite completed")
+                else:
+                    print(f"   ⚠️  AI rewrite failed, saving raw transcript only")
+                    rewritten_content = None
+
+                # Clean up temp file
+                if temp_prompt.exists():
+                    temp_prompt.unlink()
+
+            except Exception as e:
+                print(f"   ⚠️  AI rewrite error: {str(e)}")
+                rewritten_content = None
+
+            # Step 5: Save metadata
+            metadata_path = output_dir / "metadata.md"
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                f.write("---\n")
+                f.write(f"title: \"{item['title']}\"\n")
+                f.write(f"platform: {item['platform']}\n")
+                f.write(f"url: {item['url']}\n")
+                f.write(f"published_at: \"{item['published_at']}\"\n")
+                f.write(f"duration: \"{item['duration']}\"\n")
+                f.write(f"source: \"{item['source_name']}\"\n")
+                if 'views' in item:
+                    f.write(f"views: {item['views']}\n")
+                if 'tags' in item:
+                    f.write(f"tags: {item['tags']}\n")
+                f.write(f"processed_at: \"{datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')}\"\n")
+                f.write(f"transcript_method: \"{transcript_result.get('method', 'unknown')}\"\n")
+                f.write("---\n")
+
+            print(f"   ✅ Metadata saved")
+
+            return True
+
+        except Exception as e:
+            print(f"   ❌ Processing error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+
     def scan_youtube_channel(self, source: dict, limit: int = 10) -> List[dict]:
         """Scan a YouTube channel for new videos using yt-dlp"""
         print(f"   Scanning YouTube: {source['name']}...")
@@ -83,16 +248,17 @@ class ContentCurator:
             channel_url = channel_url.rstrip('/') + '/videos'
 
         try:
-            # Use yt-dlp to get channel videos
+            # Use yt-dlp to get channel videos with alternative extraction method
             cmd = [
                 'yt-dlp',
                 '--flat-playlist',
                 '--playlist-end', str(limit),
                 '--print', '%(id)s|||%(title)s|||%(duration)s|||%(upload_date)s|||%(view_count)s',
+                '--extractor-args', 'youtube:player_client=android,web',
                 channel_url
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding='utf-8')
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding='utf-8', errors='replace')
 
             if result.returncode != 0:
                 print(f"      ⚠️ Failed to fetch: {result.stderr[:200]}")
@@ -345,13 +511,18 @@ class ContentCurator:
                 print("\n\n👋 Cancelled by user")
                 return []
 
-    def batch_mode(self, platform: Optional[str] = None, limit: int = 10):
+    def batch_mode(self, platform: Optional[str] = None, limit: int = 10, auto_process: bool = False):
         """Run in batch mode: scan sources and let user select items"""
         # Scan all sources
         items = self.scan_all_sources(platform, limit)
 
-        # Display selection menu
-        selected_items = self.display_selection_menu(items)
+        # Auto-process mode or display selection menu
+        if auto_process:
+            print(f"\n🤖 Auto-processing mode: Processing all {len(items)} items...\n")
+            selected_items = items
+        else:
+            # Display selection menu
+            selected_items = self.display_selection_menu(items)
 
         if not selected_items:
             return
@@ -365,8 +536,10 @@ class ContentCurator:
             print(f"Platform: {item['platform'].upper()} | Duration: {item['duration']}")
             print("-" * 80)
 
-            # TODO: Implement content processing
-            # For now, just mark as processed
+            # Process the item
+            success = self.process_item(item)
+
+            # Update state
             platform_key = item['platform']
             if platform_key not in self.state['processed']:
                 self.state['processed'][platform_key] = {}
@@ -377,10 +550,14 @@ class ContentCurator:
                 'processed_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
                 'published_at': item['published_at'],
                 'duration': item['duration'],
-                'url': item['url']
+                'url': item['url'],
+                'success': success
             }
 
-            print(f"✅ Marked as processed (processing logic pending)\n")
+            if success:
+                print(f"✅ Processing complete\n")
+            else:
+                print(f"⚠️  Processing failed\n")
 
         # Save state
         self.save_state()
@@ -417,6 +594,12 @@ def main():
     )
 
     parser.add_argument(
+        '--auto',
+        action='store_true',
+        help='Auto-process all found items without user interaction (use with --batch)'
+    )
+
+    parser.add_argument(
         'urls',
         nargs='*',
         help='URL(s) to process directly (URL mode)'
@@ -430,14 +613,115 @@ def main():
     # Determine mode
     if args.urls:
         print("🎯 URL Mode: Direct processing")
-        print(f"   URLs: {', '.join(args.urls)}")
-        print("\n⚠️ URL mode processing logic pending implementation\n")
+        print(f"   URLs: {', '.join(args.urls)}\n")
+
+        # Process each URL
+        for url in args.urls:
+            # Extract video ID and determine platform
+            from metadata_extractor import extract_video_id
+
+            video_id = extract_video_id(url)
+            if not video_id:
+                print(f"⚠️  Could not extract video ID from: {url}")
+                continue
+
+            # Determine platform
+            if 'youtube.com' in url or 'youtu.be' in url:
+                platform = 'youtube'
+            elif 'bilibili.com' in url:
+                platform = 'bilibili'
+            elif 'xiaoyuzhou' in url:
+                platform = 'xiaoyuzhou'
+            else:
+                print(f"⚠️  Unsupported platform: {url}")
+                continue
+
+            # Check if already processed
+            if platform in curator.state['processed'] and video_id in curator.state['processed'][platform]:
+                print(f"⚠️  Already processed: {url}")
+                print(f"   Skipping. Use --force to reprocess.\n")
+                continue
+
+            # Get metadata using yt-dlp
+            print(f"📥 Fetching metadata for: {url}")
+            try:
+                cmd = [
+                    'yt-dlp',
+                    '--print', '%(id)s|||%(title)s|||%(duration)s|||%(upload_date)s|||%(view_count)s|||%(uploader)s',
+                    '--no-warnings',
+                    '--extractor-args', 'youtube:player_client=android,web',
+                    url
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding='utf-8', errors='replace')
+
+                if result.returncode != 0:
+                    print(f"⚠️  Failed to fetch metadata: {result.stderr[:200]}\n")
+                    continue
+
+                parts = result.stdout.strip().split('|||')
+                if len(parts) < 6:
+                    print(f"⚠️  Invalid metadata format\n")
+                    continue
+
+                # Parse metadata
+                duration_sec = int(float(parts[2])) if parts[2] != 'NA' else 0
+                duration_str = f"{duration_sec // 3600}:{(duration_sec % 3600) // 60:02d}:{duration_sec % 60:02d}" if duration_sec >= 3600 else f"{duration_sec // 60}:{duration_sec % 60:02d}"
+
+                upload_date = parts[3] if parts[3] != 'NA' else datetime.now().strftime('%Y%m%d')
+                published_at = f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:8]}"
+
+                item = {
+                    'id': video_id,
+                    'title': parts[1],
+                    'duration': duration_str,
+                    'published_at': published_at,
+                    'views': int(parts[4]) if parts[4] != 'NA' else 0,
+                    'source_name': parts[5] if parts[5] != 'NA' else 'Unknown',
+                    'url': url,
+                    'platform': platform,
+                    'tags': []
+                }
+
+                print(f"✅ Metadata fetched: {item['title']}")
+                print(f"   Duration: {item['duration']} | Published: {item['published_at']}\n")
+
+                # Process the item
+                print("🚀 Processing content...\n")
+                print("=" * 80)
+                success = curator.process_item(item)
+                print("=" * 80)
+
+                # Update state
+                if platform not in curator.state['processed']:
+                    curator.state['processed'][platform] = {}
+
+                curator.state['processed'][platform][video_id] = {
+                    'title': item['title'],
+                    'source': item['source_name'],
+                    'processed_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
+                    'published_at': item['published_at'],
+                    'duration': item['duration'],
+                    'url': item['url'],
+                    'success': success
+                }
+
+                curator.save_state()
+
+                if success:
+                    print(f"\n✅ Successfully processed: {item['title']}\n")
+                else:
+                    print(f"\n⚠️  Processing failed: {item['title']}\n")
+
+            except Exception as e:
+                print(f"❌ Error processing {url}: {str(e)}\n")
+                continue
+
     elif args.batch:
         # Batch mode
-        curator.batch_mode(platform=args.platform, limit=args.limit)
+        curator.batch_mode(platform=args.platform, limit=args.limit, auto_process=args.auto)
     else:
         # Default: batch mode
-        curator.batch_mode(platform=args.platform, limit=args.limit)
+        curator.batch_mode(platform=args.platform, limit=args.limit, auto_process=args.auto)
 
 
 if __name__ == '__main__':

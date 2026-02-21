@@ -66,8 +66,19 @@ class SubtitleDownloader:
                     '--sub-format', 'srt',
                     '--sub-langs', strategy['lang'],
                     '-o', str(output_dir / 'subtitle'),
-                    url
                 ]
+
+                # Add cookies file if it exists (for YouTube authentication)
+                cookies_file = Path(__file__).parent.parent / 'config' / 'youtube_cookies.txt'
+                if cookies_file.exists():
+                    cmd.extend(['--cookies', str(cookies_file)])
+
+                # Configure JavaScript runtime for YouTube n-challenge
+                deno_path = r"C:\Users\ZhuanZ（无密码）\AppData\Local\Microsoft\WinGet\Packages\DenoLand.Deno_Microsoft.Winget.Source_8wekyb3d8bbwe\deno.exe"
+                if os.path.exists(deno_path):
+                    cmd.extend(['--extractor-args', f'youtube:player_client=web;js_runtimes={deno_path}'])
+
+                cmd.append(url)
 
                 # Add subtitle download flags
                 if strategy['write_sub']:
@@ -144,7 +155,7 @@ class SubtitleDownloader:
             from fetch_bibigpt import BibiGPTClient
 
             client = BibiGPTClient(self.bibigpt_api_key)
-            result = client.fetch_transcript(url)
+            result = client.get_transcript(url)
 
             if result and result.get('transcript'):
                 print(f"      ✅ BibiGPT API successful")
@@ -190,13 +201,12 @@ class SubtitleDownloader:
         if result:
             return result
 
-        # Strategy 2: Fallback to BibiGPT API for Bilibili/Xiaoyuzhou
-        if platform in ['bilibili', 'xiaoyuzhou']:
-            print(f"\n   🎯 Fallback to BibiGPT API (paid)...")
-            result = self.download_subtitle_bibigpt(url, platform)
+        # Strategy 2: Fallback to BibiGPT API for all platforms
+        print(f"\n   🎯 Fallback to BibiGPT API (paid)...")
+        result = self.download_subtitle_bibigpt(url, platform)
 
-            if result:
-                return result
+        if result:
+            return result
 
         print(f"\n   ❌ All subtitle download strategies failed")
         return None

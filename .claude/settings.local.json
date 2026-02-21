@@ -11,7 +11,13 @@
       "Bash(findstr:*)",
       "WebFetch(domain:aihuangshu.com)",
       "Bash(npx tsc:*)",
-      "Bash(npx next build)"
+      "Bash(npx next build)",
+      "Bash(npx skills:*)",
+      "Bash(git -C \"D:\\\\project\\\\1228\" log --oneline -10)",
+      "Bash(cd:*)",
+      "Bash(set PYTHONIOENCODING=utf-8)",
+      "Bash(pip install:*)",
+      "Bash(ls:*)"
     ]
   }
 }

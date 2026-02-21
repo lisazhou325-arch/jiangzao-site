@@ -33,7 +33,7 @@ class BibiGPTClient:
         Get transcript and summary from video/podcast URL using BibiGPT API
 
         Args:
-            url: Video/podcast URL (Bilibili or Xiaoyuzhou)
+            url: Video/podcast URL (YouTube, Bilibili or Xiaoyuzhou)
             include_detail: Whether to include detailed transcript (default: True)
 
         Returns:
@@ -42,35 +42,42 @@ class BibiGPTClient:
         Raises:
             Exception: If API request fails
         """
-        endpoint = f"{self.BASE_URL}/summarizeWithConfig"
-
-        payload = {
-            "url": url,
-            "includeDetail": include_detail
-        }
+        # Use GET method with /api/open/{apiKey} endpoint (simpler and verified working)
+        endpoint = f"https://api.bibigpt.co/api/open/{self.api_key}"
 
         try:
-            response = self.session.post(endpoint, json=payload, timeout=300)
-            response.raise_for_status()
+            # First request gets redirect URL
+            response = requests.get(endpoint, params={"url": url}, timeout=30, allow_redirects=False)
+
+            # Follow redirect manually
+            if response.status_code in [301, 302, 303, 307, 308]:
+                redirect_url = response.headers.get('Location')
+                if redirect_url:
+                    # Make actual request to redirected URL
+                    response = requests.get(redirect_url, timeout=300)
+                    response.raise_for_status()
+            else:
+                response.raise_for_status()
 
             data = response.json()
 
-            # BibiGPT API returns data directly or with a code field
-            if isinstance(data, dict) and data.get("code") and data.get("code") != 0:
+            # Check for errors
+            if not data.get("success", True):
                 raise Exception(f"BibiGPT API error: {data.get('message', 'Unknown error')}")
 
-            # Extract result (API may return data directly or nested in 'data' field)
-            result = data.get("data", data) if isinstance(data, dict) else data
+            if data.get("code") == "PAYMENT_REQUIRED":
+                raise Exception(f"BibiGPT API: {data.get('message', 'Payment required')}")
 
             return {
-                "transcript": result.get("transcript", "") or result.get("detail", ""),
-                "summary": result.get("summary", ""),
-                "title": result.get("title", ""),
-                "duration": result.get("duration", 0),
-                "duration_formatted": self._format_duration(result.get("duration", 0)),
-                "cover_url": result.get("cover_url", "") or result.get("coverUrl", ""),
+                "transcript": data.get("summary", ""),  # BibiGPT returns summary in HTML format
+                "summary": data.get("summary", ""),
+                "title": data.get("id", ""),
+                "duration": data.get("costDuration", 0),
+                "duration_formatted": self._format_duration(data.get("costDuration", 0)),
+                "cover_url": "",
                 "subtitle_language": "zh-Hans",  # BibiGPT mainly returns Chinese
-                "subtitle_source": "bibigpt"
+                "subtitle_source": "bibigpt",
+                "remaining_time": data.get("remainingTime", 0)
             }
 
         except requests.exceptions.Timeout:
