@@ -173,7 +173,7 @@ class FeishuClient:
             },
             "封面图": cover_field,
             "标签": metadata.get('tags', []),
-            "嘉宾": metadata.get('guests_str', '') or metadata.get('channel', ''),
+            "嘉宾": metadata.get('guests_str', '') or metadata.get('channel', '') or metadata.get('source', ''),
         }
 
         # Add published_at as date field (millisecond timestamp)

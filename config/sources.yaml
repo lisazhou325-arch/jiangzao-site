@@ -17,43 +17,37 @@ settings:
 sources:
   youtube:
     - name: "A16z"
-      channel_id: "UCQ1VQj-37k12yS_VUhfQHsw"
-      url: "https://www.youtube.com/channel/UCQ1VQj-37k12yS_VUhfQHsw"
+      url: "https://www.youtube.com/@a16z"
       min_duration: 30
       enabled: true
       tags: ["VC", "Tech", "Startups"]
 
     - name: "Lenny s Podcast"
-      channel_id: "UC6t1076G0jYXOAoYCm153dA"
-      url: "https://www.youtube.com/channel/UC6t1076G0jYXOAoYCm153dA"
+      url: "https://www.youtube.com/@LennysPodcast"
       min_duration: 30
       enabled: true
       tags: ["Product", "Growth", "Startups"]
 
     - name: "Sequoia Capital"
-      channel_id: "UCWrF0oN6unbXrWsTN7RctTw"
-      url: "https://www.youtube.com/channel/UCWrF0oN6unbXrWsTN7RctTw"
+      url: "https://www.youtube.com/@SequoiaCapital"
       min_duration: 30
       enabled: true
       tags: ["VC", "Investing", "Startups"]
 
     - name: "Peter Yang"
-      channel_id: "UCnpBg7yqNauHtINSp0l5-cg"
-      url: "https://www.youtube.com/channel/UCnpBg7yqNauHtINSp0l5-cg"
+      url: "https://www.youtube.com/@PeterYangYT"
       min_duration: 30
       enabled: true
       tags: ["Product", "Career", "Tech"]
 
     - name: "Dwarkesh Patel"
-      channel_id: "UC1D6gT0N1s0k_x6d9N9y_2Q"
-      url: "https://www.youtube.com/channel/UC1D6gT0N1s0k_x6d9N9y_2Q"
+      url: "https://www.youtube.com/@DwarkeshPatel"
       min_duration: 30
       enabled: true
       tags: ["AI", "Science", "Philosophy"]
 
     - name: "Lex Fridman"
-      channel_id: "UCHSHZKyawb7ixDdsGog4iWA"
-      url: "https://www.youtube.com/channel/UCHSHZKyawb7ixDdsGog4iWA"
+      url: "https://www.youtube.com/@lexfridman"
       min_duration: 30
       enabled: true
       tags: ["AI", "Science", "Philosophy"]

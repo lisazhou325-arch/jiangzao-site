@@ -11,7 +11,7 @@ import argparse
 import yaml
 import json
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, date, timezone
 from pathlib import Path
 from typing import List, Dict, Optional
 
@@ -35,6 +35,20 @@ class ContentCurator:
         self.state = self.load_state()
         self.output_dir = Path(self.config.get('settings', {}).get('output_dir', './content-archive'))
         self.rewrite_prompt = self.load_rewrite_prompt()
+        # Cookies file path for YouTube authentication
+        self.cookies_file = Path(__file__).parent / 'config' / 'youtube_cookies.txt'
+        # Node.js path for yt-dlp n-challenge solving
+        self.node_path = r'C:\Program Files\nodejs\node.exe'
+
+    def _ytdlp_base_args(self):
+        """Return common yt-dlp args for cookies and JS runtime."""
+        args = []
+        if self.cookies_file.exists():
+            args += ['--cookies', str(self.cookies_file)]
+        import os
+        if os.path.exists(self.node_path):
+            args += ['--js-runtimes', f'node:{self.node_path}']
+        return args
 
     def load_config(self) -> dict:
         """Load configuration from sources.yaml"""
@@ -85,12 +99,32 @@ class ContentCurator:
                 return f.read()
         return ""
 
-    def process_item(self, item: dict) -> bool:
+    def load_knowledge_base(self) -> str:
+        kb_file = Path("config/knowledge-base.md")
+        if kb_file.exists():
+            with open(kb_file, 'r', encoding='utf-8') as f:
+                return f.read()
+        return ""
+
+    def load_reviewer_prompt(self) -> str:
+        prompt_file = Path("config/reviewer-prompt.md")
+        if prompt_file.exists():
+            with open(prompt_file, 'r', encoding='utf-8') as f:
+                return f.read()
+        return ""
+
+    def append_to_knowledge_base(self, entry: str):
+        kb_file = Path("config/knowledge-base.md")
+        with open(kb_file, 'a', encoding='utf-8') as f:
+            f.write(entry)
+
+    def process_item(self, item: dict, auto_mode: bool = False) -> bool:
         """
         Process a single content item: download transcript, rewrite with AI, save files
 
         Args:
             item: Item dict with id, title, url, platform, etc.
+            auto_mode: If True, skip interactive prompts
 
         Returns:
             True if successful, False otherwise
@@ -100,13 +134,38 @@ class ContentCurator:
             from metadata_extractor import sanitize_filename
             import requests
 
-            # Create output directory
-            date_str = item['published_at']
+            # Create output directory (use today's date for archiving, published_at stored in metadata)
+            date_str = date.today().strftime('%Y-%m-%d')
             sanitized_title = sanitize_filename(item['title'], max_length=50)
             output_dir = self.output_dir / date_str / f"{item['platform']}_{item['source_name'].lower().replace(' ', '-')}_{item['id']}"
             output_dir.mkdir(parents=True, exist_ok=True)
 
             print(f"   📁 Output: {output_dir}")
+
+            # Step 0: Ask user for transcript mode (skip in auto mode)
+            if auto_mode:
+                mode_choice = '1'
+            else:
+                print(f"\n   📋 字幕模式：")
+                print(f"      [1] 自动下载字幕")
+                print(f"      [2] 手动粘贴字幕")
+                try:
+                    mode_choice = input("   选择 [1/2] (默认: 1): ").strip()
+                except EOFError:
+                    mode_choice = '1'
+
+            if mode_choice == '2':
+                transcript_path = output_dir / "transcript.md"
+                with open(transcript_path, 'w', encoding='utf-8') as f:
+                    f.write(f"# {item['title']}\n\n")
+                    f.write(f"**Platform:** {item['platform']}\n")
+                    f.write(f"**URL:** {item['url']}\n\n")
+                    f.write("---\n\n")
+                    f.write("<!-- 请在此处粘贴文稿内容 -->\n")
+                print(f"\n   📁 Directory created: {output_dir}")
+                print(f"   📝 Paste your transcript into: {transcript_path}")
+                print(f"   ▶  When ready, run: python curator.py --process")
+                return True
 
             # Step 1: Download subtitle/transcript
             print(f"   📥 Downloading transcript...")
@@ -126,7 +185,8 @@ class ContentCurator:
                 print(f"   🖼️  Downloading cover image...")
                 try:
                     # Get thumbnail URL from yt-dlp
-                    cmd = ['yt-dlp', '--print', '%(thumbnail)s', '--no-warnings', item['url']]
+                    cmd = ['yt-dlp', '--print', '%(thumbnail)s', '--no-warnings'] + self._ytdlp_base_args()
+                    cmd.append(item['url'])
                     result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding='utf-8', errors='replace')
 
                     if result.returncode == 0 and result.stdout.strip():
@@ -155,56 +215,12 @@ class ContentCurator:
                 f.write(f"**Duration:** {item['duration']}\n")
                 f.write(f"**Published:** {item['published_at']}\n\n")
                 f.write("---\n\n")
-                f.write(transcript_result.get('text', ''))
+                f.write(transcript_result.get('transcript', transcript_result.get('text', '')))
 
             print(f"   ✅ Transcript saved")
 
-            # Step 4: AI rewrite
-            print(f"   🤖 Rewriting with AI...")
-
-            # Prepare prompt
-            full_prompt = self.rewrite_prompt + "\n\n" + transcript_result.get('text', '')
-
-            # Call AI (using subprocess to call claude CLI)
-            # Note: This assumes claude CLI is available
-            try:
-                # Write prompt to temp file
-                temp_prompt = output_dir / "temp_prompt.txt"
-                with open(temp_prompt, 'w', encoding='utf-8') as f:
-                    f.write(full_prompt)
-
-                # Call AI via stdin
-                ai_cmd = ['claude', '--no-stream']
-                ai_result = subprocess.run(
-                    ai_cmd,
-                    input=full_prompt,
-                    capture_output=True,
-                    text=True,
-                    timeout=300,
-                    encoding='utf-8',
-                    errors='replace'
-                )
-
-                if ai_result.returncode == 0 and ai_result.stdout.strip():
-                    rewritten_content = ai_result.stdout.strip()
-
-                    # Save rewritten content
-                    rewritten_path = output_dir / "rewritten.md"
-                    with open(rewritten_path, 'w', encoding='utf-8') as f:
-                        f.write(rewritten_content)
-
-                    print(f"   ✅ AI rewrite completed")
-                else:
-                    print(f"   ⚠️  AI rewrite failed, saving raw transcript only")
-                    rewritten_content = None
-
-                # Clean up temp file
-                if temp_prompt.exists():
-                    temp_prompt.unlink()
-
-            except Exception as e:
-                print(f"   ⚠️  AI rewrite error: {str(e)}")
-                rewritten_content = None
+            # Step 4: AI rewrite (Writer-Reviewer loop)
+            rewritten_content = self.writer_reviewer_rewrite(transcript_result.get('transcript', transcript_result.get('text', '')), output_dir)
 
             # Step 5: Save metadata
             metadata_path = output_dir / "metadata.md"
@@ -234,13 +250,170 @@ class ContentCurator:
             traceback.print_exc()
             return False
 
+    def writer_reviewer_rewrite(self, transcript_text: str, output_dir: Path) -> Optional[str]:
+        """Writer-Reviewer loop: iteratively rewrite content until quality threshold met"""
+        import anthropic
+
+        print(f"   🤖 Starting Writer-Reviewer loop...")
+
+        knowledge_base = self.load_knowledge_base()
+        reviewer_prompt = self.load_reviewer_prompt()
+
+        writer_system = self.rewrite_prompt
+        if knowledge_base:
+            writer_system += f"\n\n## 历史经验（来自知识库）\n\n{knowledge_base}"
+
+        client = anthropic.Anthropic(timeout=600.0)
+        writer_messages = []
+        reviewer_messages = []
+        current_draft = None
+        final_score = 0.0
+        reviewer_feedback = ""
+        max_rounds = 3
+        round_num = 0
+
+        for round_num in range(1, max_rounds + 1):
+            print(f"   📝 Round {round_num}/{max_rounds} - Writer generating...")
+
+            if current_draft is None:
+                writer_messages.append({"role": "user", "content": transcript_text})
+            else:
+                writer_messages.append({
+                    "role": "user",
+                    "content": f"评审意见：\n{reviewer_feedback}\n\n请根据评审意见修改草稿。"
+                })
+
+            try:
+                writer_resp = client.messages.create(
+                    model="claude-sonnet-4-5-20250929",
+                    max_tokens=4096,
+                    system=writer_system,
+                    messages=writer_messages
+                )
+                current_draft = writer_resp.content[0].text
+                writer_messages.append({"role": "assistant", "content": current_draft})
+            except Exception as e:
+                print(f"   ⚠️  Writer error: {str(e)}")
+                break
+
+            print(f"   🔍 Round {round_num}/{max_rounds} - Reviewer evaluating...")
+
+            reviewer_messages.append({"role": "user", "content": f"## 待评审文章\n\n{current_draft}"})
+
+            try:
+                reviewer_resp = client.messages.create(
+                    model="claude-opus-4-6",
+                    max_tokens=2048,
+                    system=reviewer_prompt,
+                    messages=reviewer_messages
+                )
+                reviewer_feedback = reviewer_resp.content[0].text
+                reviewer_messages.append({"role": "assistant", "content": reviewer_feedback})
+
+                # Parse average score
+                avg_score = 0.0
+                for line in reviewer_feedback.split('\n'):
+                    if '平均分' in line and '/' in line:
+                        try:
+                            score_part = line.split('：')[-1].split('/')[0].strip()
+                            avg_score = float(score_part)
+                        except (ValueError, IndexError):
+                            pass
+
+                final_score = avg_score
+                print(f"   📊 Round {round_num} score: {avg_score:.1f}/10")
+
+                if avg_score >= 8.0:
+                    print(f"   ✅ Quality threshold met (≥8.0), accepting draft")
+                    break
+
+                if round_num == max_rounds:
+                    print(f"   ℹ️  Max rounds reached, accepting best draft")
+
+            except Exception as e:
+                print(f"   ⚠️  Reviewer error: {str(e)}")
+                break
+
+        if current_draft:
+            rewritten_path = output_dir / "rewritten.md"
+            with open(rewritten_path, 'w', encoding='utf-8') as f:
+                f.write(current_draft)
+            print(f"   ✅ AI rewrite completed (final score: {final_score:.1f}/10)")
+
+            # Append to knowledge base
+            kb_entry = f"\n## {datetime.now().strftime('%Y-%m-%d')} - 迭代记录\n\n"
+            kb_entry += f"- 轮数：{round_num}\n"
+            kb_entry += f"- 最终分数：{final_score:.1f}/10\n"
+            if final_score > 0 and reviewer_feedback:
+                # Extract key improvement points from last review
+                lines = reviewer_feedback.split('\n')
+                feedback_lines = []
+                in_feedback = False
+                for line in lines:
+                    if '修改意见' in line:
+                        in_feedback = True
+                        continue
+                    if in_feedback and line.strip() and not line.startswith('是否达标'):
+                        feedback_lines.append(f"  {line.strip()}")
+                    if '是否达标' in line:
+                        break
+                if feedback_lines:
+                    kb_entry += f"- 关键改进点：\n" + '\n'.join(feedback_lines[:3]) + '\n'
+            kb_entry += "\n---\n"
+            self.append_to_knowledge_base(kb_entry)
+        else:
+            print(f"   ⚠️  AI rewrite failed, no draft produced")
+
+        return current_draft
+
+    def process_pending(self):
+        """Process items that have transcript.md but no rewritten.md"""
+        print("🔍 Scanning for pending items...")
+
+        pending = []
+        for transcript_path in self.output_dir.rglob("transcript.md"):
+            item_dir = transcript_path.parent
+            rewritten_path = item_dir / "rewritten.md"
+
+            if rewritten_path.exists():
+                continue
+
+            # Check if transcript has actual content (not just placeholder)
+            with open(transcript_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if '<!-- 请在此处粘贴文稿内容 -->' in content and len(content.strip().split('\n')) <= 8:
+                continue
+
+            pending.append((item_dir, transcript_path, content))
+
+        if not pending:
+            print("✅ No pending items found.")
+            return
+
+        print(f"📋 Found {len(pending)} pending item(s):\n")
+        for i, (item_dir, _, _) in enumerate(pending, 1):
+            print(f"   [{i}] {item_dir.name}")
+
+        print()
+        for item_dir, transcript_path, content in pending:
+            print(f"🚀 Processing: {item_dir.name}")
+            print("=" * 80)
+            # Extract transcript text (skip header lines before ---)
+            parts = content.split('---\n\n', 1)
+            transcript_text = parts[1] if len(parts) > 1 else content
+            self.writer_reviewer_rewrite(transcript_text, item_dir)
+            print("=" * 80)
+            print()
+
+        print("✅ All pending items processed.")
+
     def scan_youtube_channel(self, source: dict, limit: int = 10) -> List[dict]:
         """Scan a YouTube channel for new videos using yt-dlp"""
-        print(f"   Scanning YouTube: {source['name']}...")
+        print(f"   正在扫描 YouTube: {source['name']}...")
 
         channel_url = source.get('url', '')
         if not channel_url:
-            print(f"      ⚠️ No URL found for {source['name']}, skipping")
+            print(f"      ⚠️ 未找到 {source['name']} 的 URL，跳过")
             return []
 
         # Ensure URL ends with /videos for proper playlist extraction
@@ -255,13 +428,13 @@ class ContentCurator:
                 '--playlist-end', str(limit),
                 '--print', '%(id)s|||%(title)s|||%(duration)s|||%(upload_date)s|||%(view_count)s',
                 '--extractor-args', 'youtube:player_client=android,web',
-                channel_url
-            ]
+            ] + self._ytdlp_base_args()
+            cmd.append(channel_url)
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding='utf-8', errors='replace')
 
             if result.returncode != 0:
-                print(f"      ⚠️ Failed to fetch: {result.stderr[:200]}")
+                print(f"      ⚠️ 获取失败: {result.stderr[:200]}")
                 return []
 
             videos = []
@@ -333,37 +506,37 @@ class ContentCurator:
                     'tags': source.get('tags', [])
                 })
 
-            print(f"      ✅ Found {len(videos)} new videos")
+            print(f"      ✅ 发现 {len(videos)} 个新视频")
             return videos
 
         except subprocess.TimeoutExpired:
-            print(f"      ⚠️ Timeout while fetching channel")
+            print(f"      ⚠️ 获取频道超时")
             return []
         except Exception as e:
-            print(f"      ⚠️ Error: {str(e)}")
+            print(f"      ⚠️ 错误: {str(e)}")
             return []
 
     def scan_bilibili_user(self, source: dict, limit: int = 10) -> List[dict]:
         """Scan a Bilibili user for new videos using Bilibili API"""
-        print(f"   Scanning Bilibili: {source['name']}...")
+        print(f"   正在扫描 Bilibili: {source['name']}...")
 
         # TODO: Implement Bilibili API scanning
         # For now, return empty list
-        print(f"      ⚠️ Bilibili scanning not yet implemented")
+        print(f"      ⚠️ Bilibili 扫描功能待开发")
         return []
 
     def scan_xiaoyuzhou_podcast(self, source: dict, limit: int = 10) -> List[dict]:
         """Scan a Xiaoyuzhou podcast for new episodes"""
-        print(f"   Scanning Xiaoyuzhou: {source['name']}...")
+        print(f"   正在扫描 小宇宙: {source['name']}...")
 
         # TODO: Implement Xiaoyuzhou scanning
         # For now, return empty list
-        print(f"      ⚠️ Xiaoyuzhou scanning not yet implemented")
+        print(f"      ⚠️ 小宇宙 扫描功能待开发")
         return []
 
     def scan_all_sources(self, platform: Optional[str] = None, limit: int = 10) -> List[dict]:
         """Scan all enabled sources for new content"""
-        print("\n🔍 Scanning sources for new content...\n")
+        print("\n🔍 正在扫描订阅源...\n")
 
         all_items = []
 
@@ -394,15 +567,18 @@ class ContentCurator:
                 episodes = self.scan_xiaoyuzhou_podcast(source, limit)
                 all_items.extend(episodes)
 
+        # Sort by published date (newest first)
+        all_items.sort(key=lambda x: x.get('published_at', ''), reverse=True)
+
         return all_items
 
     def display_selection_menu(self, items: List[dict]) -> List[dict]:
         """Display interactive selection menu and return selected items"""
         if not items:
-            print("\n📭 No new content found across all sources.")
+            print("\n📭 所有订阅源暂无新内容。")
             return []
 
-        print(f"\n🔍 Found {len(items)} new items across all sources:\n")
+        print(f"\n🔍 发现 {len(items)} 个新内容：\n")
         print("=" * 80)
 
         # Group by platform
@@ -412,43 +588,43 @@ class ContentCurator:
 
         # Display YouTube items
         if youtube_items:
-            print(f"\n📺 YouTube ({len(youtube_items)} items):\n")
+            print(f"\n📺 YouTube ({len(youtube_items)} 个)：\n")
             for i, item in enumerate(youtube_items, 1):
                 idx = i
-                print(f"  {idx}. [{item['source_name']}] {item['title']}")
-                print(f"      Duration: {item['duration']} | Published: {item['published_at']} | Views: {item.get('views', 0):,}")
+                print(f"  {idx}. 【{item['source_name']}】{item['title']}")
+                print(f"      时长: {item['duration']} | 发布: {item['published_at']} | 播放: {item.get('views', 0):,}")
                 if item.get('tags'):
-                    print(f"      Tags: {', '.join(item['tags'])}")
+                    print(f"      标签: {', '.join(item['tags'])}")
                 print()
 
         # Display Bilibili items
         if bilibili_items:
-            print(f"\n📺 Bilibili ({len(bilibili_items)} items):\n")
+            print(f"\n📺 Bilibili ({len(bilibili_items)} 个)：\n")
             start_idx = len(youtube_items) + 1
             for i, item in enumerate(bilibili_items, start_idx):
-                print(f"  {i}. [{item['source_name']}] {item['title']}")
-                print(f"      Duration: {item['duration']} | Published: {item['published_at']}")
+                print(f"  {i}. 【{item['source_name']}】{item['title']}")
+                print(f"      时长: {item['duration']} | 发布: {item['published_at']}")
                 if item.get('tags'):
-                    print(f"      Tags: {', '.join(item['tags'])}")
+                    print(f"      标签: {', '.join(item['tags'])}")
                 print()
 
         # Display Xiaoyuzhou items
         if xiaoyuzhou_items:
-            print(f"\n🎙️ Xiaoyuzhou ({len(xiaoyuzhou_items)} items):\n")
+            print(f"\n🎙️ 小宇宙 ({len(xiaoyuzhou_items)} 个)：\n")
             start_idx = len(youtube_items) + len(bilibili_items) + 1
             for i, item in enumerate(xiaoyuzhou_items, start_idx):
-                print(f"  {i}. [{item['source_name']}] {item['title']}")
-                print(f"      Duration: {item['duration']} | Published: {item['published_at']}")
+                print(f"  {i}. 【{item['source_name']}】{item['title']}")
+                print(f"      时长: {item['duration']} | 发布: {item['published_at']}")
                 if item.get('tags'):
-                    print(f"      Tags: {', '.join(item['tags'])}")
+                    print(f"      标签: {', '.join(item['tags'])}")
                 print()
 
         print("=" * 80)
-        print("\n📝 Selection options:")
-        print("  • Enter numbers (e.g., '1,2,5' or '1-3,5')")
-        print("  • Enter 'all' to select all items")
-        print("  • Enter 'youtube', 'bilibili', or 'xiaoyuzhou' to select platform")
-        print("  • Enter 'q' to quit\n")
+        print("\n📝 选择操作：")
+        print("  • 输入数字选择（如：1,2,5 或 1-3,5）")
+        print("  • 输入 all 选择全部")
+        print("  • 输入 youtube、bilibili 或 xiaoyuzhou 选择平台")
+        print("  • 输入 q 退出\n")
 
         # Get user selection
         while True:
@@ -489,26 +665,26 @@ class ContentCurator:
                         selected_items.append(items[idx - 1])
 
                 if not selected_items:
-                    print("⚠️ No valid items selected. Please try again.\n")
+                    print("⚠️ 请重新选择有效的选项。\n")
                     continue
 
                 # Confirm selection
-                print(f"\n✅ Selected {len(selected_items)} items:")
+                print(f"\n✅ 已选择 {len(selected_items)} 个内容：")
                 for i, item in enumerate(selected_items, 1):
                     print(f"  {i}. [{item['platform'].upper()}] {item['title']}")
 
-                confirm = input("\nProceed with processing? [Y/n]: ").strip().lower()
+                confirm = input("\n确认处理这些内容？[Y/n]: ").strip().lower()
                 if confirm in ['', 'y', 'yes']:
                     return selected_items
                 else:
-                    print("\n🔄 Selection cancelled. Please select again.\n")
+                    print("\n🔄 已取消，请重新选择。\n")
                     continue
 
             except (ValueError, IndexError) as e:
-                print(f"⚠️ Invalid input: {e}. Please try again.\n")
+                print(f"⚠️ 输入无效：{e}，请重试。\n")
                 continue
             except KeyboardInterrupt:
-                print("\n\n👋 Cancelled by user")
+                print("\n\n👋 已取消")
                 return []
 
     def batch_mode(self, platform: Optional[str] = None, limit: int = 10, auto_process: bool = False):
@@ -518,7 +694,7 @@ class ContentCurator:
 
         # Auto-process mode or display selection menu
         if auto_process:
-            print(f"\n🤖 Auto-processing mode: Processing all {len(items)} items...\n")
+            print(f"\n🤖 自动处理模式：正在处理全部 {len(items)} 个内容...\n")
             selected_items = items
         else:
             # Display selection menu
@@ -528,12 +704,12 @@ class ContentCurator:
             return
 
         # Process selected items
-        print(f"\n🚀 Processing {len(selected_items)} items...\n")
+        print(f"\n🚀 正在处理 {len(selected_items)} 个内容...\n")
         print("=" * 80)
 
         for i, item in enumerate(selected_items, 1):
-            print(f"\n[{i}/{len(selected_items)}] Processing: {item['title']}")
-            print(f"Platform: {item['platform'].upper()} | Duration: {item['duration']}")
+            print(f"\n[{i}/{len(selected_items)}] 正在处理：{item['title']}")
+            print(f"平台: {item['platform'].upper()} | 时长: {item['duration']}")
             print("-" * 80)
 
             # Process the item
@@ -555,17 +731,17 @@ class ContentCurator:
             }
 
             if success:
-                print(f"✅ Processing complete\n")
+                print(f"✅ 处理完成\n")
             else:
-                print(f"⚠️  Processing failed\n")
+                print(f"⚠️  处理失败\n")
 
         # Save state
         self.save_state()
 
         print("=" * 80)
-        print(f"\n✅ Batch processing complete!")
-        print(f"   • Processed: {len(selected_items)} items")
-        print(f"   • State saved to: {STATE_FILE}\n")
+        print(f"\n✅ 批量处理完成！")
+        print(f"   • 已处理: {len(selected_items)} 个内容")
+        print(f"   • 状态已保存\n")
 
 
 def main():
@@ -605,12 +781,22 @@ def main():
         help='URL(s) to process directly (URL mode)'
     )
 
+    parser.add_argument(
+        '--process',
+        action='store_true',
+        help='Process pending items that have transcript but no rewritten content'
+    )
+
     args = parser.parse_args()
 
     # Initialize curator
     curator = ContentCurator()
 
     # Determine mode
+    if args.process:
+        curator.process_pending()
+        return
+
     if args.urls:
         print("🎯 URL Mode: Direct processing")
         print(f"   URLs: {', '.join(args.urls)}\n")
@@ -647,11 +833,11 @@ def main():
             try:
                 cmd = [
                     'yt-dlp',
+                    '--skip-download',
                     '--print', '%(id)s|||%(title)s|||%(duration)s|||%(upload_date)s|||%(view_count)s|||%(uploader)s',
                     '--no-warnings',
-                    '--extractor-args', 'youtube:player_client=android,web',
-                    url
-                ]
+                ] + curator._ytdlp_base_args()
+                cmd.append(url)
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding='utf-8', errors='replace')
 
                 if result.returncode != 0:
@@ -688,7 +874,7 @@ def main():
                 # Process the item
                 print("🚀 Processing content...\n")
                 print("=" * 80)
-                success = curator.process_item(item)
+                success = curator.process_item(item, auto_mode=True)
                 print("=" * 80)
 
                 # Update state

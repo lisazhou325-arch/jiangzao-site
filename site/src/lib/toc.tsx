@@ -30,22 +30,30 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
   if (items.length === 0) return null;
 
   return (
-    <nav className="w-full">
-      <div className="text-[11px] font-medium tracking-widest uppercase text-stone-400 mb-4">
+    <nav className="floating-toc">
+      <div
+        className="font-mono mb-3"
+        style={{
+          fontSize: "0.55rem",
+          letterSpacing: "0.15em",
+          textTransform: "uppercase",
+          color: "var(--muted)",
+          paddingBottom: "8px",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
         目录
       </div>
-      <ul className="space-y-0.5 border-l border-stone-200">
+      <ul className="space-y-0.5">
         {items.map((item) => (
           <li key={item.id}>
             <a
               href={`#${item.id}`}
-              className={`block text-[13px] leading-7 transition-colors duration-150 ${
-                item.level === 3 ? "pl-5" : "pl-3"
-              } ${
-                activeId === item.id
-                  ? "text-indigo-600 border-l-2 border-indigo-500 -ml-px font-medium"
-                  : "text-stone-400 hover:text-stone-600"
-              }`}
+              className="toc-link"
+              data-active={activeId === item.id ? "true" : undefined}
+              style={{
+                paddingLeft: item.level === 3 ? "14px" : "8px",
+              }}
             >
               {item.text}
             </a>

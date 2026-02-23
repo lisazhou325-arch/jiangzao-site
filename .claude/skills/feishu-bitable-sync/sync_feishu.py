@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Add daily-content-curator scripts to path
 base_dir = os.path.dirname(__file__)
-curator_dir = os.path.join(base_dir, '..', 'daily-content-curator')
+curator_dir = os.path.join(base_dir, '..', 'content-curator')
 sys.path.insert(0, os.path.join(curator_dir, 'scripts'))
 from feishu_sync import FeishuClient
 from metadata_extractor import extract_quotes_from_rewritten
@@ -35,6 +35,52 @@ def load_state():
 def save_state(state):
     with open(STATE_FILE, 'w', encoding='utf-8') as f:
         yaml.dump(state, f, allow_unicode=True, default_flow_style=False)
+
+def _extract_chinese_title(rewritten: str) -> str:
+    """从 rewritten.md 提取第一个 ## 标题作为中文标题"""
+    match = re.search(r'^## (.+)$', rewritten, re.MULTILINE)
+    if match:
+        return match.group(1).strip()
+    return ''
+
+
+def _extract_guests(rewritten: str) -> str:
+    """从创作说明提取嘉宾名，优先用 嘉宾: 字段，回退到选题方向里的人名"""
+    # 优先：嘉宾：字段
+    match = re.search(r'嘉宾[：:]\s*(.+)', rewritten)
+    if match:
+        return match.group(1).strip()
+
+    # 回退：从选题方向提取人名
+    match = re.search(r'选题方向[：:]\s*(.+)', rewritten)
+    if not match:
+        return ''
+    direction = match.group(1).strip()
+    segments = [s.strip() for s in direction.split('+')]
+    names = []
+    for seg in segments:
+        en_name = re.search(r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', seg)
+        zh_name = re.search(r'[\u4e00-\u9fff]{1,3}·[\u4e00-\u9fff]{1,4}', seg)
+        if en_name:
+            names.append(en_name.group(1))
+        elif zh_name:
+            names.append(zh_name.group(0))
+    return '、'.join(names) if names else ''
+
+
+def _extract_body(rewritten: str) -> str:
+    """去掉开头金句列表和创作说明，返回正文部分，最多5000字"""
+    # 跳过开头的金句（1. "..." 格式）和创作说明（📝 ... --- 之间的内容）
+    # 找到第一个 ## 标题作为正文起点
+    match = re.search(r'\n(## .+)', rewritten)
+    if match:
+        body = rewritten[match.start():].strip()
+    else:
+        # 没有 ## 标题，跳过 --- 分隔线之后的内容
+        parts = rewritten.split('---', 1)
+        body = parts[-1].strip() if len(parts) > 1 else rewritten.strip()
+    return body[:5000]
+
 
 def sync_to_feishu(metadata, rewritten_summary, cover_path=None):
     """Sync content to Feishu Bitable"""
@@ -57,11 +103,13 @@ def sync_to_feishu(metadata, rewritten_summary, cover_path=None):
         'processed_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
         'duration': metadata.get('duration', ''),
         'channel': metadata.get('channel', '') or metadata.get('uploader', ''),
+        'guests_str': _extract_guests(rewritten_summary) if rewritten_summary else (metadata.get('guests_str', '') or metadata.get('channel', '') or metadata.get('source', '')),
         'views': metadata.get('views', 0),
         'likes': metadata.get('likes', 0),
         'tags': metadata.get('tags', []),
         'output_dir': metadata.get('output_dir', ''),
-        'rewritten_summary': rewritten_summary[:2000] if rewritten_summary else '',
+        'rewritten_summary': _extract_body(rewritten_summary) if rewritten_summary else '',
+        'chinese_title': _extract_chinese_title(rewritten_summary) if rewritten_summary else '',
         'quotes': metadata.get('quotes', [])
     }
     
@@ -83,7 +131,7 @@ def sync_existing_outputs():
     # Make path relative to curator_dir
     if not os.path.isabs(output_dir):
         base_dir = os.path.dirname(__file__)
-        curator_dir = os.path.join(base_dir, '..', 'daily-content-curator')
+        curator_dir = os.path.join(base_dir, '..', 'content-curator')
         output_dir = os.path.join(curator_dir, output_dir)
     output_path = Path(output_dir)
 

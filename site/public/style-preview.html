@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>降噪 · 风格广场</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Space Grotesk', 'PingFang SC', sans-serif;
+  background: #0a0a0a;
+  color: #fff;
+  min-height: 100vh;
+  padding: 48px 24px;
+}
+
+h1.page-title {
+  text-align: center;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.page-sub {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #666;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 64px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ─── STYLE LABEL ─── */
+.style-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* ══════════════════════════════════════
+   1. DARK MINIMAL
+══════════════════════════════════════ */
+.dark-minimal {
+  background: #000;
+  border: 1px solid #1a1a1a;
+  border-radius: 4px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.dark-minimal:hover { border-color: #00ff88; }
+.dark-minimal .style-label { color: #00ff88; opacity: 1; }
+
+.dm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #1e1e1e;
+  border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #00ff88;
+  letter-spacing: 0.1em;
+  margin-bottom: 24px;
+}
+.dm-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: #00ff88;
+  border-radius: 50%;
+  animation: blink 1.5s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.dm-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #fff;
+  margin-bottom: 12px;
+}
+.dm-title span { color: #00ff88; }
+
+.dm-desc {
+  font-size: 0.8rem;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 28px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.dm-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.dm-card {
+  background: #0d0d0d;
+  border: 1px solid #1a1a1a;
+  padding: 14px;
+  border-radius: 2px;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+.dm-card:hover { border-color: #00ff88; background: #0f1a12; }
+.dm-card-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: #00ff88;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+.dm-card-title {
+  font-size: 0.8rem;
+  color: #ccc;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.dm-card-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: #333;
+  margin-top: 8px;
+}
+
+.dm-scanline {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.01) 2px, rgba(0,255,136,0.01) 4px);
+  pointer-events: none;
+}
+
+/* ══════════════════════════════════════
+   2. GLASSMORPHISM
+══════════════════════════════════════ */
+.glass-wrap {
+  background: linear-gradient(135deg, #0d0d1a 0%, #0a0a1f 40%, #120a1f 100%);
+  border-radius: 16px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-orb1 {
+  position: absolute;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(120,80,255,0.35) 0%, transparent 70%);
+  top: -80px; right: -60px;
+  pointer-events: none;
+}
+.glass-orb2 {
+  position: absolute;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(0,180,255,0.25) 0%, transparent 70%);
+  bottom: -40px; left: -40px;
+  pointer-events: none;
+}
+
+.glass-wrap .style-label { color: #a78bfa; opacity: 1; }
+
+.glass-header {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 24px;
+}
+.glass-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #93c5fd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.glass-sub {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.05em;
+}
+
+.glass-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+.glass-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 16px;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+.glass-card:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(167,139,250,0.3);
+  transform: translateY(-2px);
+}
+.glass-card-img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, rgba(120,80,255,0.2), rgba(0,180,255,0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: rgba(255,255,255,0.2);
+}
+.glass-card-title {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.glass-card-meta {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.3);
+  display: flex;
+  gap: 8px;
+}
+.glass-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(167,139,250,0.15);
+  border: 1px solid rgba(167,139,250,0.2);
+  border-radius: 20px;
+  font-size: 0.6rem;
+  color: #c4b5fd;
+}
+
+/* ══════════════════════════════════════
+   3. DATA DASHBOARD
+══════════════════════════════════════ */
+.dashboard {
+  background: #060d1f;
+  border: 1px solid #0e2040;
+  border-radius: 8px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.dash-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,120,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,120,255,0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+.dashboard .style-label { color: #38bdf8; opacity: 1; }
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+.dash-stat {
+  background: rgba(0,120,255,0.05);
+  border: 1px solid rgba(0,120,255,0.12);
+  border-radius: 4px;
+  padding: 12px;
+}
+.dash-stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #38bdf8;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.dash-stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: #1e4a7a;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dash-title {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #e0f2fe;
+  line-height: 1.1;
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+.dash-title span {
+  color: #38bdf8;
+}
+
+.dash-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 20px;
+  position: relative;
+  z-index: 1;
+}
+.dash-card {
+  background: rgba(0,120,255,0.04);
+  border: 1px solid #0e2040;
+  border-radius: 4px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.dash-card:hover { border-color: #38bdf8; background: rgba(56,189,248,0.05); }
+.dash-card-bar {
+  height: 2px;
+  background: linear-gradient(90deg, #38bdf8, transparent);
+  margin-bottom: 10px;
+  border-radius: 1px;
+}
+.dash-card-title {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.dash-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dash-card-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  color: #38bdf8;
+  letter-spacing: 0.08em;
+}
+.dash-card-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  color: #1e4a7a;
+}
+
+/* ══════════════════════════════════════
+   4. NEUMORPHISM
+══════════════════════════════════════ */
+.neu {
+  background: #e8eaf0;
+  border-radius: 20px;
+  padding: 32px;
+}
+.neu .style-label { color: #7c8db5; opacity: 1; }
+
+.neu-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #3d4a6b;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.neu-sub {
+  font-size: 0.8rem;
+  color: #8a96b5;
+  margin-bottom: 24px;
+}
+
+.neu-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: #e8eaf0;
+  box-shadow: 4px 4px 8px #c8cad0, -4px -4px 8px #ffffff;
+  font-size: 0.7rem;
+  color: #6b7db5;
+  margin-bottom: 20px;
+  letter-spacing: 0.05em;
+}
+.neu-badge-dot {
+  width: 6px; height: 6px;
+  background: #6b9bf5;
+  border-radius: 50%;
+}
+
+.neu-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.neu-card {
+  background: #e8eaf0;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 6px 6px 12px #c8cad0, -6px -6px 12px #ffffff;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+.neu-card:hover {
+  box-shadow: 3px 3px 6px #c8cad0, -3px -3px 6px #ffffff;
+}
+.neu-card:active {
+  box-shadow: inset 4px 4px 8px #c8cad0, inset -4px -4px 8px #ffffff;
+}
+.neu-card-img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #dde0ea, #f0f2f8);
+  box-shadow: inset 2px 2px 5px #c8cad0, inset -2px -2px 5px #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b0b8d0;
+  font-size: 1.2rem;
+}
+.neu-card-title {
+  font-size: 0.78rem;
+  color: #3d4a6b;
+  line-height: 1.4;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.neu-card-meta {
+  font-size: 0.65rem;
+  color: #8a96b5;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.neu-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e8eaf0;
+  box-shadow: 2px 2px 4px #c8cad0, -2px -2px 4px #ffffff;
+  font-size: 0.6rem;
+  color: #6b7db5;
+}
+
+/* ─── CHOOSE BUTTON ─── */
+.choose-btn {
+  display: block;
+  width: 100%;
+  margin-top: 24px;
+  padding: 10px;
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  transition: opacity 0.2s, transform 0.15s;
+  text-decoration: none;
+}
+.choose-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+
+.btn-dark { background: #00ff88; color: #000; }
+.btn-glass { background: linear-gradient(135deg, #7c3aed, #2563eb); color: #fff; }
+.btn-dash { background: #38bdf8; color: #060d1f; }
+.btn-neu {
+  background: #e8eaf0;
+  color: #3d4a6b;
+  box-shadow: 4px 4px 8px #c8cad0, -4px -4px 8px #ffffff;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">降噪 · 风格广场</h1>
+<p class="page-sub">选择你喜欢的视觉方向</p>
+
+<div class="grid">
+
+  <!-- 1. DARK MINIMAL -->
+  <div class="dark-minimal">
+    <div class="dm-scanline"></div>
+    <div class="style-label">01 · Dark Minimal · 暗黑极简</div>
+    <div class="dm-badge">LIVE · AI 精选</div>
+    <div class="dm-title">降<span>噪</span></div>
+    <div class="dm-desc">// 从海量信息中过滤噪音<br>// 获取优质访谈里的深度洞察</div>
+    <div class="dm-cards">
+      <div class="dm-card">
+        <div class="dm-card-tag">YOUTUBE · AI</div>
+        <div class="dm-card-title">Sam Altman 谈 AGI 时代的创业机会与风险</div>
+        <div class="dm-card-meta">2025/01/15</div>
+      </div>
+      <div class="dm-card">
+        <div class="dm-card-tag">小宇宙 · 科技</div>
+        <div class="dm-card-title">硅谷投资人眼中的下一个十年</div>
+        <div class="dm-card-meta">2025/01/12</div>
+      </div>
+    </div>
+    <a class="choose-btn btn-dark" href="#">选择此风格 →</a>
+  </div>
+
+  <!-- 2. GLASSMORPHISM -->
+  <div class="glass-wrap">
+    <div class="glass-orb1"></div>
+    <div class="glass-orb2"></div>
+    <div class="style-label">02 · Glassmorphism · 玻璃态未来</div>
+    <div class="glass-header">
+      <div class="glass-title">降噪</div>
+      <div class="glass-sub">AI 精选 · 人工策展 · 深度洞察</div>
+    </div>
+    <div class="glass-cards">
+      <div class="glass-card">
+        <div class="glass-card-img">◈</div>
+        <div class="glass-card-title">Sam Altman 谈 AGI 时代的创业机会与风险</div>
+        <div class="glass-card-meta">
+          <span class="glass-tag">AI</span>
+          <span style="color:rgba(255,255,255,0.25)">2025/01/15</span>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="glass-card-img">◉</div>
+        <div class="glass-card-title">硅谷投资人眼中的下一个十年</div>
+        <div class="glass-card-meta">
+          <span class="glass-tag">科技</span>
+          <span style="color:rgba(255,255,255,0.25)">2025/01/12</span>
+        </div>
+      </div>
+    </div>
+    <a class="choose-btn btn-glass" href="#">选择此风格 →</a>
+  </div>
+
+  <!-- 3. DATA DASHBOARD -->
+  <div class="dashboard">
+    <div class="dash-grid-bg"></div>
+    <div class="style-label">03 · Data Dashboard · 数据仪表盘</div>
+    <div class="dash-stats">
+      <div class="dash-stat">
+        <div class="dash-stat-val">09</div>
+        <div class="dash-stat-label">已发布</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-val">3</div>
+        <div class="dash-stat-label">平台</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dash-stat-val">AI</div>
+        <div class="dash-stat-label">策展</div>
+      </div>
+    </div>
+    <div class="dash-title">降<span>噪</span></div>
+    <div class="dash-cards">
+      <div class="dash-card">
+        <div class="dash-card-bar"></div>
+        <div class="dash-card-title">Sam Altman 谈 AGI 时代的创业机会与风险</div>
+        <div class="dash-card-footer">
+          <span class="dash-card-tag">YOUTUBE</span>
+          <span class="dash-card-date">2025/01/15</span>
+        </div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-bar" style="background:linear-gradient(90deg,#818cf8,transparent)"></div>
+        <div class="dash-card-title">硅谷投资人眼中的下一个十年</div>
+        <div class="dash-card-footer">
+          <span class="dash-card-tag" style="color:#818cf8">小宇宙</span>
+          <span class="dash-card-date">2025/01/12</span>
+        </div>
+      </div>
+    </div>
+    <a class="choose-btn btn-dash" href="#">选择此风格 →</a>
+  </div>
+
+  <!-- 4. NEUMORPHISM -->
+  <div class="neu">
+    <div class="style-label">04 · Neumorphism · 新拟物</div>
+    <div class="neu-badge"><div class="neu-badge-dot"></div>AI 精选内容</div>
+    <div class="neu-title">降噪</div>
+    <div class="neu-sub">从海量信息中过滤噪音，获取深度洞察</div>
+    <div class="neu-cards">
+      <div class="neu-card">
+        <div class="neu-card-img">◈</div>
+        <div class="neu-card-title">Sam Altman 谈 AGI 时代的创业机会与风险</div>
+        <div class="neu-card-meta">
+          <span class="neu-tag">AI</span>
+          <span>2025/01/15</span>
+        </div>
+      </div>
+      <div class="neu-card">
+        <div class="neu-card-img">◉</div>
+        <div class="neu-card-title">硅谷投资人眼中的下一个十年</div>
+        <div class="neu-card-meta">
+          <span class="neu-tag">科技</span>
+          <span>2025/01/12</span>
+        </div>
+      </div>
+    </div>
+    <a class="choose-btn btn-neu" href="#">选择此风格 →</a>
+  </div>
+
+</div>
+
+</body>
+</html>

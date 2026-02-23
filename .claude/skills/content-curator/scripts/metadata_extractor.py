@@ -317,16 +317,26 @@ def extract_quotes_from_rewritten(rewritten_content: str) -> List[str]:
     """
     quotes = []
 
-    # Look for "## 金句" section
-    pattern = r'##\s*金句\s*\n((?:\d+\.\s*.+\n?)+)'
-    match = re.search(pattern, rewritten_content, re.MULTILINE)
-
-    if match:
-        quotes_section = match.group(1)
-        # Extract numbered items
-        quote_pattern = r'\d+\.\s*(.+)'
-        matches = re.findall(quote_pattern, quotes_section)
+    # Format 1: opening numbered list with quoted strings e.g. 1. "..."
+    quote_pattern_inline = r'\d+\.\s*[""「](.+?)[""」]'
+    matches = re.findall(quote_pattern_inline, rewritten_content[:600])
+    if matches:
         quotes.extend([q.strip() for q in matches])
+
+    # Format 2: "# 金句精选" or "## 金句" section with numbered items (with or without quotes)
+    if not quotes:
+        section_match = re.search(r'#+ 金句[^\n]*\n((?:\d+\.\s*.+\n?)+)', rewritten_content, re.MULTILINE)
+        if section_match:
+            quote_pattern = r'\d+\.\s*[""「]?(.+?)[""」]?\s*$'
+            matches = re.findall(quote_pattern, section_match.group(1), re.MULTILINE)
+            quotes.extend([q.strip() for q in matches])
+
+    # Format 3: opening numbered list without quotes e.g. 1. text...
+    if not quotes:
+        quote_pattern_noquote = r'^\d+\.\s*(.+)$'
+        matches = re.findall(quote_pattern_noquote, rewritten_content[:600], re.MULTILINE)
+        if matches:
+            quotes.extend([q.strip() for q in matches])
 
     # Ensure exactly 5 quotes (pad with empty strings if needed)
     while len(quotes) < 5:

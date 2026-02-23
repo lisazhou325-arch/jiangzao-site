@@ -43,6 +43,33 @@ feishu-bitable-sync/
 
 ---
 
+## ✅ Pre-Sync Data Integrity Check
+
+**CRITICAL: Always run this check before syncing. Never skip.**
+
+在执行同步前，必须逐一验证每个待同步文件夹的数据完整性，输出检查报告：
+
+```
+文件夹名:
+  cover=True/False   # 是否有 cover.jpg/webp/png
+  guests="..."       # 嘉宾字段（metadata 的 source/channel 字段）
+  quotes=5/5         # 金句数量（必须为 5/5）
+  body_len=XXXX      # 摘要正文字符数（应 > 500）
+```
+
+**检查规则：**
+- `cover=False` → 用视频 ID 构造 YouTube 缩略图 URL 下载：`https://img.youtube.com/vi/{id}/maxresdefault.jpg`，失败则降级 `hqdefault.jpg`
+- `quotes < 5` → 检查 rewritten.md 格式，支持三种格式：
+  1. 开头编号列表带引号：`1. "..."`
+  2. 开头编号列表无引号：`1. ...`
+  3. `# 金句精选` section 下的编号列表
+- `guests=""` → 依次回退：`guests_str` → `channel` → `source`
+- `body_len < 500` → 检查 rewritten.md 是否存在，正文提取逻辑是否正确
+
+**只有所有字段验证通过后，才能执行同步。**
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites

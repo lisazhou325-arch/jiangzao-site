@@ -69,9 +69,10 @@ function parseRecord(item: Record<string, unknown>): ContentRecord {
   };
 }
 export async function getRecords(): Promise<ContentRecord[]> {
-  const token = await getAccessToken();
+  let token = await getAccessToken();
   const records: ContentRecord[] = [];
   let pageToken: string | undefined;
+  let retried = false;
 
   do {
     const url = new URL(
@@ -84,6 +85,14 @@ export async function getRecords(): Promise<ContentRecord[]> {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
+
+    // Retry once if token expired
+    if (data.code !== 0 && data.msg?.includes("access token") && !retried) {
+      cachedToken = null;
+      token = await getAccessToken();
+      retried = true;
+      continue;
+    }
     if (data.code !== 0) throw new Error(`Feishu records failed: ${data.msg}`);
 
     for (const item of data.data.items || []) {
@@ -96,27 +105,47 @@ export async function getRecords(): Promise<ContentRecord[]> {
 }
 
 export async function getRecord(id: string): Promise<ContentRecord> {
-  const token = await getAccessToken();
-  const res = await fetch(
+  let token = await getAccessToken();
+  let res = await fetch(
     `https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_BITABLE_APP_TOKEN}/tables/${FEISHU_TABLE_ID}/records/${id}`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  const data = await res.json();
+  let data = await res.json();
+
+  // Retry once if token expired
+  if (data.code !== 0 && data.msg?.includes("access token")) {
+    cachedToken = null;
+    token = await getAccessToken();
+    res = await fetch(
+      `https://open.feishu.cn/open-apis/bitable/v1/apps/${FEISHU_BITABLE_APP_TOKEN}/tables/${FEISHU_TABLE_ID}/records/${id}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    data = await res.json();
+  }
+
   if (data.code !== 0) throw new Error(`Feishu record failed: ${data.msg}`);
   return parseRecord(data.data.record);
 }
 
 export async function getCoverUrl(fileToken: string): Promise<string> {
-  const token = await getAccessToken();
-  const res = await fetch(
-    `https://open.feishu.cn/open-apis/drive/v1/medias/batch_get_tmp_download_url?file_tokens=${fileToken}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  const data = await res.json();
-  if (data.code !== 0) throw new Error(`Feishu cover failed: ${data.msg}`);
-  const urls = data.data?.tmp_download_urls;
-  if (!urls || urls.length === 0) return "";
-  return urls[0].tmp_download_url || "";
+  try {
+    const token = await getAccessToken();
+    const res = await fetch(
+      `https://open.feishu.cn/open-apis/drive/v1/medias/batch_get_tmp_download_url?file_tokens=${fileToken}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await res.json();
+    if (data.code !== 0) {
+      console.warn(`Feishu cover warning: ${data.msg}`);
+      return "";
+    }
+    const urls = data.data?.tmp_download_urls;
+    if (!urls || urls.length === 0) return "";
+    return urls[0].tmp_download_url || "";
+  } catch (e) {
+    console.warn(`Feishu cover error: ${e}`);
+    return "";
+  }
 }
 
 export async function getRecordWithCover(
@@ -128,6 +157,9 @@ export async function getRecordWithCover(
   }
   return record;
 }
+
+// Shared cover URL cache (token -> { url, expiresAt })
+const coverUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
 export async function getRecordsWithCovers(): Promise<ContentRecord[]> {
   const records = await getRecords();
@@ -144,13 +176,13 @@ export async function getRecordsWithCovers(): Promise<ContentRecord[]> {
     );
     const data = await res.json();
     if (data.code === 0 && data.data?.tmp_download_urls) {
-      const urlMap = new Map<string, string>();
+      const expiresAt = Date.now() + 25 * 60 * 1000;
       for (const item of data.data.tmp_download_urls) {
-        urlMap.set(item.file_token, item.tmp_download_url);
+        coverUrlCache.set(item.file_token, { url: item.tmp_download_url, expiresAt });
       }
       for (const record of records) {
         if (record.coverFileToken) {
-          record.coverUrl = urlMap.get(record.coverFileToken) || "";
+          record.coverUrl = coverUrlCache.get(record.coverFileToken)?.url || "";
         }
       }
     }

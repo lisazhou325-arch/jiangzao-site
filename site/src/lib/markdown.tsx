@@ -23,7 +23,7 @@ const components: Components = {
   h1: ({ children }) => {
     const text = childrenToText(children);
     return (
-      <h1 id={slugify(text)} className="text-2xl font-bold mt-12 mb-5 text-stone-900 tracking-tight">
+      <h1 id={slugify(text)} className="font-serif mt-10 mb-4" style={{ fontSize: "1.6rem", fontWeight: 400, color: "var(--ink)", letterSpacing: "-0.02em", lineHeight: 1.25 }}>
         {children}
       </h1>
     );
@@ -31,8 +31,21 @@ const components: Components = {
   h2: ({ children }) => {
     const text = childrenToText(children);
     return (
-      <h2 id={slugify(text)} className="text-xl font-bold mt-14 mb-4 text-stone-900 tracking-tight flex items-center gap-3">
-        <span className="inline-block w-0.5 h-5 rounded-full bg-indigo-400 shrink-0" />
+      <h2
+        id={slugify(text)}
+        className="font-serif mt-12 mb-5"
+        style={{
+          fontSize: "1.35rem",
+          fontWeight: 700,
+          color: "var(--ink)",
+          letterSpacing: "-0.01em",
+          lineHeight: 1.4,
+          padding: "0.75rem 1rem",
+          borderLeft: "4px solid var(--gold)",
+          background: "linear-gradient(to right, rgba(160,133,90,0.07), transparent)",
+          borderRadius: "0 4px 4px 0",
+        }}
+      >
         {children}
       </h2>
     );
@@ -40,13 +53,23 @@ const components: Components = {
   h3: ({ children }) => {
     const text = childrenToText(children);
     return (
-      <h3 id={slugify(text)} className="text-lg font-semibold mt-10 mb-3 text-stone-800 tracking-tight">
+      <h3
+        id={slugify(text)}
+        className="font-serif mt-9 mb-3"
+        style={{
+          fontSize: "1.12rem",
+          fontWeight: 600,
+          color: "var(--ink)",
+          paddingLeft: "0.75rem",
+          borderLeft: "3px solid var(--border-dark)",
+        }}
+      >
         {children}
       </h3>
     );
   },
   blockquote: ({ children }) => (
-    <blockquote className="border-l-2 border-indigo-300 bg-indigo-50/40 rounded-r-lg pl-4 pr-4 py-3 my-5 text-stone-600 not-italic text-[15px] leading-relaxed">
+    <blockquote className="paper-quote my-6 not-italic">
       {children}
     </blockquote>
   ),
@@ -55,7 +78,10 @@ const components: Components = {
 export function MarkdownContent({ content }: { content: string }) {
   const bodyContent = content.replace(/^#\s+.+\n/, "");
   return (
-    <article className="prose prose-stone prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-p:text-stone-600 prose-p:leading-[1.8] prose-li:text-stone-600 prose-strong:text-stone-800 prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline">
+    <article
+      className="prose max-w-none prose-p:leading-[1.9] prose-li:leading-[1.8]"
+      style={{ color: "var(--ink-light)", fontFamily: "'PingFang SC', 'Noto Sans SC', system-ui, sans-serif" }}
+    >
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {bodyContent}
       </ReactMarkdown>

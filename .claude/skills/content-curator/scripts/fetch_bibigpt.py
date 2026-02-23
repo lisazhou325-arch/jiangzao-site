@@ -46,18 +46,27 @@ class BibiGPTClient:
         endpoint = f"https://api.bibigpt.co/api/open/{self.api_key}"
 
         try:
-            # First request gets redirect URL
-            response = requests.get(endpoint, params={"url": url}, timeout=30, allow_redirects=False)
-
-            # Follow redirect manually
-            if response.status_code in [301, 302, 303, 307, 308]:
-                redirect_url = response.headers.get('Location')
-                if redirect_url:
-                    # Make actual request to redirected URL
-                    response = requests.get(redirect_url, timeout=300)
-                    response.raise_for_status()
-            else:
-                response.raise_for_status()
+            # Use bibigpt.co endpoint with includeDetail to get full subtitles
+            endpoint_full = f"https://bibigpt.co/api/open/{self.api_key}"
+            last_error = None
+            response = None
+            for attempt in range(3):
+                try:
+                    response = requests.get(
+                        endpoint_full,
+                        params={"url": url, "includeDetail": "true"},
+                        timeout=300
+                    )
+                    if response.status_code == 200:
+                        break
+                    last_error = f"HTTP {response.status_code}"
+                    time.sleep(2)
+                except requests.exceptions.RequestException as e:
+                    last_error = str(e)
+                    time.sleep(2)
+            if response is None or response.status_code != 200:
+                raise requests.exceptions.RequestException(last_error or "All retries failed")
+            response.raise_for_status()
 
             data = response.json()
 
@@ -68,14 +77,25 @@ class BibiGPTClient:
             if data.get("code") == "PAYMENT_REQUIRED":
                 raise Exception(f"BibiGPT API: {data.get('message', 'Payment required')}")
 
+            # Extract full transcript from subtitlesArray if available
+            transcript = ""
+            detail = data.get("detail", {})
+            subs = detail.get("subtitlesArray", []) if detail else []
+            if subs:
+                transcript = " ".join(s.get("text", "") for s in subs if s.get("text"))
+
+            # Fall back to summary if no subtitles
+            if not transcript:
+                transcript = data.get("summary", "")
+
             return {
-                "transcript": data.get("summary", ""),  # BibiGPT returns summary in HTML format
+                "transcript": transcript,
                 "summary": data.get("summary", ""),
-                "title": data.get("id", ""),
+                "title": detail.get("title", "") if detail else data.get("id", ""),
                 "duration": data.get("costDuration", 0),
                 "duration_formatted": self._format_duration(data.get("costDuration", 0)),
-                "cover_url": "",
-                "subtitle_language": "zh-Hans",  # BibiGPT mainly returns Chinese
+                "cover_url": detail.get("cover", "") if detail else "",
+                "subtitle_language": "zh-Hans",
                 "subtitle_source": "bibigpt",
                 "remaining_time": data.get("remainingTime", 0)
             }

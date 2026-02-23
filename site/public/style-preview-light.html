@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>降噪 · 浅色风格广场</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Fraunces:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Plus Jakarta Sans', 'PingFang SC', sans-serif;
+  background: #f0ede8;
+  color: #1a1a1a;
+  min-height: 100vh;
+  padding: 48px 24px 80px;
+}
+
+.page-title {
+  text-align: center;
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+}
+.page-sub {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #999;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 56px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 28px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.style-no {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  opacity: 0.4;
+}
+
+.choose-btn {
+  display: block;
+  width: 100%;
+  margin-top: 24px;
+  padding: 11px;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  text-decoration: none;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.choose-btn:hover { opacity: 0.75; transform: translateY(-1px); }
+
+/* ══════════════════════════════════════
+   1. WARM MINIMAL — 奶油极简
+══════════════════════════════════════ */
+.warm {
+  background: #faf8f4;
+  border-radius: 20px;
+  padding: 32px;
+  border: 1px solid #ede9e2;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.04);
+}
+.warm .style-no { color: #c4a882; opacity: 1; }
+
+.warm-hero {
+  background: #1a1612;
+  border-radius: 14px;
+  padding: 28px 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.warm-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top right, rgba(196,168,130,0.2), transparent 60%);
+}
+.warm-title {
+  font-family: 'Fraunces', serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #faf8f4;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  position: relative;
+}
+.warm-title em {
+  font-style: italic;
+  color: #c4a882;
+}
+.warm-sub {
+  font-size: 0.75rem;
+  color: rgba(250,248,244,0.4);
+  margin-top: 10px;
+  letter-spacing: 0.05em;
+  position: relative;
+}
+.warm-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.warm-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #ede9e2;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.warm-card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+.warm-card-img {
+  aspect-ratio: 3/2;
+  background: linear-gradient(135deg, #f5f0e8, #ede9e2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c4a882;
+  font-size: 1.5rem;
+}
+.warm-card-body { padding: 12px; }
+.warm-card-tag {
+  font-size: 0.6rem;
+  color: #c4a882;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.warm-card-title {
+  font-size: 0.78rem;
+  color: #2d2520;
+  line-height: 1.4;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.btn-warm {
+  background: #1a1612;
+  color: #faf8f4;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ══════════════════════════════════════
+   2. SOFT GRID — 柔和网格
+══════════════════════════════════════ */
+.softgrid {
+  background: #f5f7ff;
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e8ecff;
+}
+.softgrid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(99,102,241,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,102,241,0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+.softgrid .style-no { color: #6366f1; opacity: 1; }
+
+.sg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 50px;
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.15);
+  font-size: 0.65rem;
+  color: #6366f1;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+  position: relative;
+}
+.sg-dot { width: 6px; height: 6px; background: #6366f1; border-radius: 50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.sg-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 3rem;
+  font-weight: 800;
+  color: #1e1b4b;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 6px;
+  position: relative;
+}
+.sg-title span { color: #6366f1; }
+.sg-sub {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-bottom: 20px;
+  position: relative;
+}
+.sg-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  position: relative;
+}
+.sg-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid #e8ecff;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.sg-card:hover {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+  transform: translateY(-2px);
+}
+.sg-card-img {
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a5b4fc;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+.sg-card-title {
+  font-size: 0.78rem;
+  color: #1e1b4b;
+  line-height: 1.4;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.sg-card-meta { font-size: 0.62rem; color: #9ca3af; display: flex; gap: 6px; }
+.sg-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 50px;
+  background: rgba(99,102,241,0.08);
+  color: #6366f1;
+  font-size: 0.6rem;
+}
+.btn-sg {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border-radius: 8px;
+}
+
+/* ══════════════════════════════════════
+   3. PAPER CARD — 纸质卡片
+══════════════════════════════════════ */
+.paper {
+  background: #fdfcf8;
+  border-radius: 20px;
+  padding: 32px;
+  border: 1px solid #e8e4d8;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+}
+.paper .style-no { color: #a0855a; opacity: 1; }
+
+.paper-header {
+  border-bottom: 2px solid #1a1612;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.paper-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 3.2rem;
+  font-weight: 400;
+  color: #1a1612;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.paper-title em { font-style: italic; color: #a0855a; }
+.paper-issue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: #a0855a;
+  letter-spacing: 0.1em;
+  text-align: right;
+  line-height: 1.6;
+}
+
+.paper-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.paper-card {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.paper-card:hover { opacity: 0.75; }
+.paper-card-img {
+  aspect-ratio: 3/2;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #f0ece0, #e8e4d8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c4b090;
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+  border: 1px solid #e0dcd0;
+}
+.paper-card-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  color: #a0855a;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.paper-card-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 0.85rem;
+  color: #1a1612;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.btn-paper {
+  background: #1a1612;
+  color: #fdfcf8;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ══════════════════════════════════════
+   4. AURORA — 极光渐变
+══════════════════════════════════════ */
+.aurora {
+  background: #fafffe;
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #d4f5ef;
+}
+.aurora-bg1 {
+  position: absolute;
+  width: 280px; height: 280px;
+  background: radial-gradient(circle, rgba(52,211,153,0.15) 0%, transparent 70%);
+  top: -60px; right: -40px;
+  pointer-events: none;
+}
+.aurora-bg2 {
+  position: absolute;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%);
+  bottom: -40px; left: 20px;
+  pointer-events: none;
+}
+.aurora .style-no { color: #059669; opacity: 1; }
+
+.aurora-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 50px;
+  background: rgba(52,211,153,0.1);
+  border: 1px solid rgba(52,211,153,0.2);
+  font-size: 0.65rem;
+  color: #059669;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+  position: relative;
+}
+.aurora-dot { width: 6px; height: 6px; background: #34d399; border-radius: 50%; }
+
+.aurora-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 6px;
+  position: relative;
+  background: linear-gradient(135deg, #064e3b 0%, #0891b2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.aurora-sub {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-bottom: 20px;
+  position: relative;
+}
+.aurora-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  position: relative;
+}
+.aurora-card {
+  background: rgba(255,255,255,0.7);
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid rgba(52,211,153,0.15);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  backdrop-filter: blur(8px);
+}
+.aurora-card:hover {
+  border-color: rgba(52,211,153,0.4);
+  box-shadow: 0 4px 20px rgba(52,211,153,0.1);
+  transform: translateY(-2px);
+}
+.aurora-card-img {
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(52,211,153,0.1), rgba(56,189,248,0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #34d399;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+.aurora-card-title {
+  font-size: 0.78rem;
+  color: #064e3b;
+  line-height: 1.4;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.aurora-card-meta { font-size: 0.62rem; color: #9ca3af; display: flex; gap: 6px; }
+.aurora-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 50px;
+  background: rgba(52,211,153,0.1);
+  color: #059669;
+  font-size: 0.6rem;
+}
+.btn-aurora {
+  background: linear-gradient(135deg, #059669, #0891b2);
+  color: #fff;
+  border-radius: 8px;
+}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">降噪 · 浅色风格广场</h1>
+<p class="page-sub">Light Theme Styles · 选择你喜欢的方向</p>
+
+<div class="grid">
+
+  <!-- 1. WARM MINIMAL -->
+  <div class="warm">
+    <div class="style-no">01 · Warm Minimal · 奶油极简</div>
+    <div class="warm-hero">
+      <div class="warm-title">降<em>噪</em></div>
+      <div class="warm-sub">AI 精选 · 人工策展 · 深度洞察</div>
+    </div>
+    <div class="warm-cards">
+      <div class="warm-card">
+        <div class="warm-card-img">◈</div>
+        <div class="warm-card-body">
+          <div class="warm-card-tag">YouTube · AI</div>
+          <div class="warm-card-title">Sam Altman 谈 AGI 时代的创业机会与风险</div>
+        </div>
+      </div>
+      <div class="warm-card">
+        <div class="warm-card-img">◉</div>
+        <div class="warm-card-body">
+          <div class="warm-card-tag">小宇宙 · 科技</div>
+          <div class="warm-card-title">硅谷投资人眼中的下一个十年</div>
+        </div>
+      </div>
+    </div>
+    <a class="choose-btn btn-warm" href="#">选择此风格 →</a>
+  </div>
+
+  <!-- 2. SOFT GRID -->
+  <div class="softgrid">
+    <div class="style-no">02 · Soft Grid · 柔和网格</div>
+    <div class="sg-badge"><div class="sg-dot"></div>AI 精选内容</div>
+    <div class="sg-title">降<span>噪</span></div>
+    <div class="sg-sub">从海量信息中过滤噪音，获取深度洞察</div>
+    <div class="sg-cards">
+      <div class="sg-card">
+        <div class="sg-card-img">◈</div>
+        <div class="sg-card-title">Sam Altman 谈 AGI 时代的创业机会与风险</div>
+        <div class="sg-card-meta">
+          <span class="sg-tag">AI</span>
+          <span>2025/01/15</span>
+        </div>
+      </div>
+      <div class="sg-card">
+        <div class="sg-card-img">◉</div>
+        <div class="sg-card-title">硅谷投资人眼中的下一个十年</div>
+        <div class="sg-card-meta">
+          <span class="sg-tag">科技</span>
+          <span>2025/01/12</span>
+        </div>
+      </div>
+    </div>
+    <a class="choose-btn btn-sg" href="#">选择此风格 →</a>
+  </div>
+
+  <!-- 3. PAPER CARD -->
+  <div class="paper">
+    <div class="style-no">03 · Paper Card · 纸质卡片</div>
+    <div class="paper-header">
+      <div class="paper-title">降<em>噪</em></div>
+      <div class="paper-issue">AI 精选内容<br>Vol.26·02</div>
+    </div>
+    <div class="paper-cards">
+      <div class="paper-card">
+        <div class="paper-card-img">◈</div>
+        <div class="paper-card-tag">YouTube · AI</div>
+        <div class="paper-card-title">Sam Altman 谈 AGI 时代的创业机会与风险</div>
+      </div>
+      <div class="paper-card">
+        <div class="paper-card-img">◉</div>
+        <div class="paper-card-tag">小宇宙 · 科技</div>
+        <div class="paper-card-title">硅谷投资人眼中的下一个十年</div>
+      </div>
+    </div>
+    <a class="choose-btn btn-paper" href="#">选择此风格 →</a>
+  </div>
+
+  <!-- 4. AURORA -->
+  <div class="aurora">
+    <div class="aurora-bg1"></div>
+    <div class="aurora-bg2"></div>
+    <div class="style-no">04 · Aurora · 极光渐变</div>
+    <div class="aurora-badge"><div class="aurora-dot"></div>AI 精选内容</div>
+    <div class="aurora-title">降噪</div>
+    <div class="aurora-sub">从海量信息中过滤噪音，获取深度洞察</div>
+    <div class="aurora-cards">
+      <div class="aurora-card">
+        <div class="aurora-card-img">◈</div>
+        <div class="aurora-card-title">Sam Altman 谈 AGI 时代的创业机会与风险</div>
+        <div class="aurora-card-meta">
+          <span class="aurora-tag">AI</span>
+          <span>2025/01/15</span>
+        </div>
+      </div>
+      <div class="aurora-card">
+        <div class="aurora-card-img">◉</div>
+        <div class="aurora-card-title">硅谷投资人眼中的下一个十年</div>
+        <div class="aurora-card-meta">
+          <span class="aurora-tag">科技</span>
+          <span>2025/01/12</span>
+        </div>
+      </div>
+    </div>
+    <a class="choose-btn btn-aurora" href="#">选择此风格 →</a>
+  </div>
+
+</div>
+
+</body>
+</html>
