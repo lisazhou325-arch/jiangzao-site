@@ -28,21 +28,29 @@ function platformLabel(p: string): string {
   return map[p] || p;
 }
 
-const TAG_SYSTEM = [
-  { key: null, label: "All" },
-  { key: "__new__", label: "New" },
-  { key: "AI Coding", label: "AI Coding" },
-  { key: "AI Products", label: "AI Products" },
-  { key: "AI Organization", label: "AI Organization" },
-  { key: "AI Business", label: "AI Business" },
-  { key: "AI Principles", label: "AI Principles" },
-  { key: "Personal Productivity", label: "Personal Productivity" },
-  { key: "Physical AI", label: "Physical AI" },
+// Tag display order preference
+const TAG_ORDER = [
+  "AI Coding", "AI Products", "AI Organization",
+  "AI Business", "AI Principles", "Personal Productivity", "Physical AI",
 ];
 
 export function ContentGrid({ records }: { records: ContentItem[] }) {
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
+  // Collect tags from data, sorted by preferred order
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    records.forEach((r) => r.tags.forEach((t) => tagSet.add(t)));
+    return Array.from(tagSet).sort((a, b) => {
+      const ia = TAG_ORDER.indexOf(a);
+      const ib = TAG_ORDER.indexOf(b);
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return a.localeCompare(b);
+    });
+  }, [records]);
 
   // Filter records
   const filtered = useMemo(() => {
@@ -102,13 +110,25 @@ export function ContentGrid({ records }: { records: ContentItem[] }) {
 
       {/* Tag filters */}
       <div className="flex flex-wrap gap-2 mb-10">
-        {TAG_SYSTEM.map((t) => (
+        <button
+          onClick={() => setActiveTag(null)}
+          className={activeTag === null ? "paper-tag-active" : "paper-tag-filter"}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setActiveTag(activeTag === "__new__" ? null : "__new__")}
+          className={activeTag === "__new__" ? "paper-tag-active" : "paper-tag-filter"}
+        >
+          New
+        </button>
+        {allTags.map((tag) => (
           <button
-            key={t.label}
-            onClick={() => setActiveTag(activeTag === t.key ? null : t.key)}
-            className={activeTag === t.key ? "paper-tag-active" : "paper-tag-filter"}
+            key={tag}
+            onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+            className={activeTag === tag ? "paper-tag-active" : "paper-tag-filter"}
           >
-            {t.label}
+            {tag}
           </button>
         ))}
       </div>

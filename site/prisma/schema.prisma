@@ -1,0 +1,24 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+}
+
+model ViewCount {
+  id        String   @id @default(cuid())
+  articleId String   @unique
+  title     String?
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}

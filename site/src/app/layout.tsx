@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Instrument_Serif } from "next/font/google";
 import { JetBrains_Mono } from "next/font/google";
+import { Providers } from "@/lib/providers";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className={`${instrumentSerif.variable} ${jetbrainsMono.variable} antialiased`}>
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

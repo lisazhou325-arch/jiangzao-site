@@ -1,0 +1,19 @@
+# env
+.env
+.env.local
+.env*.local
+
+# dependencies
+node_modules/
+
+# Next.js
+site/.next/
+site/out/
+
+# Prisma
+site/prisma/*.db
+site/prisma/*.db-journal
+
+# misc
+.DS_Store
+*.log

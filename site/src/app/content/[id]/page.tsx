@@ -2,6 +2,8 @@ import { getRecordWithCover, getRecords } from "@/lib/feishu";
 import { MarkdownContent } from "@/lib/markdown";
 import { TableOfContents } from "@/lib/toc";
 import { extractToc } from "@/lib/toc-utils";
+import { ViewTracker } from "@/lib/view-tracker";
+import { AuthNav } from "@/lib/auth-nav";
 import Link from "next/link";
 
 export const revalidate = 3600;
@@ -70,8 +72,10 @@ export default async function ContentPage({
           >
             降<em style={{ fontStyle: "italic", color: "var(--gold)" }}>噪</em>
           </span>
+          <AuthNav />
         </div>
       </div>
+      <ViewTracker articleId={id} title={record.title} />
 
       {/* Cover */}
       <div className="container mx-auto px-6 sm:px-10 lg:px-16 pt-8">

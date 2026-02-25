@@ -121,7 +121,13 @@
       "Bash(curl:*)",
       "Bash(python3:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm run dev)",
+      "Bash(vercel --version:*)"
     ]
   }
 }

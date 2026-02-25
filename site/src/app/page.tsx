@@ -1,5 +1,6 @@
 import { getRecordsWithCovers } from "@/lib/feishu";
 import { ContentGrid } from "@/lib/content-grid";
+import { AuthNav } from "@/lib/auth-nav";
 
 export const revalidate = 3600;
 
@@ -37,9 +38,12 @@ export default async function HomePage() {
           <span className="font-mono" style={{ fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)" }}>
             {issueNo}
           </span>
-          <span className="font-mono" style={{ fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)" }}>
-            {published.length} 篇精选
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="font-mono" style={{ fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--muted)" }}>
+              {published.length} 篇精选
+            </span>
+            <AuthNav />
+          </div>
         </div>
 
         {/* Title */}
