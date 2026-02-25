@@ -5,11 +5,11 @@ export const authConfig: NextAuthConfig = {
   pages: { signIn: "/login" },
   callbacks: {
     jwt({ token, user }) {
-      if (user) (token as any).role = (user as any).role;
+      if (user) token.role = (user as any).role;
       return token;
     },
     session({ session, token }) {
-      if (session.user) (session.user as any).role = (token as any).role;
+      if (session.user) (session.user as any).role = token.role;
       return session;
     },
   },

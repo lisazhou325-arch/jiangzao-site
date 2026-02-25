@@ -4,39 +4,38 @@ import bcrypt from "bcryptjs";
 import path from "path";
 
 const adapter = new PrismaLibSql({
-  url: `file:${path.join(process.cwd(), "prisma/dev.db")}`,
+  url: process.env.TURSO_DATABASE_URL ?? `file:${path.join(process.cwd(), "prisma/dev.db")}`,
+  authToken: process.env.TURSO_AUTH_TOKEN,
 });
 const prisma = new PrismaClient({ adapter } as any);
 
 async function main() {
-  // 管理员：豆沙
-  const adminPassword = await bcrypt.hash("dousha2024", 10);
+  const adminPassword = await bcrypt.hash("123", 10);
   await prisma.user.upsert({
-    where: { email: "dousha@jiangzao.com" },
-    update: {},
+    where: { email: "admin@jiangzao.com" },
+    update: { password: adminPassword },
     create: {
-      email: "dousha@jiangzao.com",
+      email: "admin@jiangzao.com",
       password: adminPassword,
-      name: "豆沙",
+      name: "管理员",
       role: "ADMIN",
     },
   });
 
-  // 测试普通用户
-  const testPassword = await bcrypt.hash("test123456", 10);
+  const guestPassword = await bcrypt.hash("123", 10);
   await prisma.user.upsert({
-    where: { email: "test@jiangzao.com" },
-    update: {},
+    where: { email: "guest@jiangzao.com" },
+    update: { password: guestPassword },
     create: {
-      email: "test@jiangzao.com",
-      password: testPassword,
-      name: "测试用户",
+      email: "guest@jiangzao.com",
+      password: guestPassword,
+      name: "访客",
       role: "USER",
     },
   });
 
-  console.log("✓ 管理员账户：dousha@jiangzao.com / dousha2024");
-  console.log("✓ 测试账户：  test@jiangzao.com / test123456");
+  console.log("✓ 管理员：admin@jiangzao.com / 123");
+  console.log("✓ 访客：  guest@jiangzao.com / 123");
 }
 
 main()
